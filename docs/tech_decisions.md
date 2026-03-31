@@ -55,14 +55,10 @@ enggsystemfeed/
 │   ├── schemas.py
 │   ├── service.py
 │   └── handler.py
-├── search/
-│   ├── __init__.py
-│   ├── service.py
-│   └── dao.py
 ├── ingest/
 │   ├── __init__.py
-│   ├── handler.py           # orchestrates fetch → chunk → embed → store
-│   ├── chunker.py
+│   ├── controller.py        # POST /api/v1/ingest — triggered by GitHub Actions
+│   ├── handler.py           # orchestrates fetch → embed → store
 │   └── embedder.py
 ├── prompts/
 │   ├── __init__.py
@@ -71,8 +67,6 @@ enggsystemfeed/
 │   ├── prerequisites.py
 │   └── ingest.py
 ```
-
-**Note:** `search` module uses `dao.py` + `service.py` only — no handler or controller. Search is routed through `BlogHandler`.
 
 ---
 
@@ -97,9 +91,10 @@ enggsystemfeed/
 6. Insert
 
 ## Ingest Scheduling
-- **APScheduler** — used to schedule the daily RSS ingest job. Chosen over Celery for simplicity: no separate broker or worker process needed.
-- Runs once per day inside the FastAPI process.
-- No explicit monitoring — successful ingest is observable from new blog rows in DB. Errors logged.
+- **GitHub Actions cron** — triggers `POST /api/v1/ingest` once per day at 6 AM UTC.
+- Endpoint is protected by `x-ingest-secret` header — validated against `INGEST_SECRET` env var using `secrets.compare_digest`.
+- Endpoint is hidden from Swagger UI (`include_in_schema=False`).
+- No monitoring inside the app — GitHub Actions job fails if endpoint returns non-200, triggering a GitHub email notification.
 
 ## Auth (Google OAuth)
 - Full server-side OAuth flow — no token exposure to client
@@ -140,14 +135,14 @@ enggsystemfeed/
 - `docker compose up -d` works on both environments — no extra flags needed
 
 ## Deployment
-- Digital Ocean — single Droplet ($12/month, 2 vCPU, 2GB RAM), upgrade to $24 (4GB RAM) if needed
+- Digital Ocean — single Droplet ($6/month, 1 vCPU, 1GB RAM)
 - All services run via docker-compose on the same Droplet — no managed DB or separate services
+- Initial DB seeded locally (ingest + embeddings), copied to prod via `pg_dump` — prod never runs bulk ingest
 
 ## ORM and Database Access
 
 - **SQLAlchemy** — ORM for all database access. DAOs use `Session` injected via FastAPI's `Depends(get_db)`.
 - **pgvector-sqlalchemy** (`pgvector.sqlalchemy`) — SQLAlchemy integration for the `Vector` column type and pgvector operators (`<=>` cosine distance). Used in `TagDAO.find_similar` and `PrerequisiteDAO.find_similar`.
-- Raw SQL via `text()` for hybrid search (keyword + vector + RRF CTE) — SQLAlchemy ORM is insufficient for this query shape.
 
 ---
 
@@ -163,26 +158,13 @@ enggsystemfeed/
 **Decision: pgvector**
 
 - Postgres extension — no extra service, no extra memory footprint, fits on a single Droplet
-- Qdrant ruled out: separate service, higher memory usage (observed to be problematic on self-hosted setups)
-- Corpus size (hundreds to low thousands of articles) is well within pgvector's range
-- Hybrid search implemented as a single SQL query — tsvector keyword + pgvector similarity, RRF fusion via CTE (no app-side merging needed)
-- RRF formula: `1 / (60 + rank)` summed across keyword and vector result lists — standard formula from Cormack et al. 2009, k=60 is the canonical default
+- Used exclusively for tag and prerequisite normalization (cosine similarity at ingest)
+- Qdrant ruled out: separate service, higher memory usage
 
-## Search & Embeddings
-
-**SearchDAO and SearchService class design — resolved. See `docs/dao_and_service_class_design.md`.**
-- RSS content is chunked at ingest — each chunk embedded and stored in `blog_chunk` table (`blog_id`, `chunk_text`, `embedding vector(1536)`) via pgvector
-- Chunk-level embeddings chosen over a single per-article embedding — more precise semantic recall for specific concepts buried in long articles
-- Limited tier articles (< 150 words) are excluded from chunking/embedding and never appear in semantic search
-- Hybrid search uses RRF (Reciprocal Rank Fusion) to combine keyword and semantic ranked results — implemented as a single SQL CTE, no app-side fusion
-- **Note:** Once data is ingested, test search via shell before wiring to the API — verify keyword, semantic, and RRF fusion results independently
-
-## Chunking
-- RSS content used as-is — no article scraping. Content tiers handle RSS content length variation.
-- Strip HTML tags via BeautifulSoup (already in stack for og:image scraping) → plain text. Safe to run unconditionally — harmless on plain text, handles HTML content without conditional logic.
-- If content is within token limit (~512 tokens) → embed directly as a single vector, skip chunking
-- If content exceeds token limit → chunk with `RecursiveCharacterTextSplitter` from `langchain-text-splitters` (standalone package, not full LangChain), then embed each chunk
-- Limited tier articles (< 150 words) are excluded from search and never reach the chunker/embedder
+## Embeddings
+- Embeddings used only for tag and prerequisite normalization at ingest — not for search
+- Each tag/prerequisite name is embedded via `Embedder.embed()` at ingest time and stored alongside the name
+- Cosine similarity check against existing tags/prerequisites in DB (threshold: 0.88) — merge or insert
 
 ## Pydantic Schemas
 
@@ -197,12 +179,7 @@ All API request/response schemas are documented in `docs/api_contracts.md`. Key 
 
 ## Handler Design
 
-All handler class designs are documented in `docs/handler_design_guide.md`. Key decisions:
-
-- `search/` has no handler or controller — search is routed entirely through `BlogHandler`
-- Guest keyword search goes through `BlogService.list_blogs(keyword=...)` — no `SearchService` involved
-- Signed-in hybrid search: `BlogHandler._hybrid_search` embeds query inline, calls `SearchService.keyword_search` + `SearchService.vector_search`, then `BlogHandler._reciprocal_rank_fusion` applies RRF formula
-- Search results returned in full in one response — frontend paginates locally. Result cap: `SEARCH_RESULT_LIMIT = 30` (defined in `constants.py`)
+All handler class designs are documented in `docs/handler_design_guide.md`.
 
 ---
 
@@ -246,12 +223,6 @@ Two methods used across ingest and on-demand handlers:
 - Refresh: configurable interval (default 7 days) — periodic regeneration intentional, newer LLM calls may produce better results
 - No rate limiting — cache amortizes cost
 
-## Search Behaviour
-- Search always runs across all sources — no combined source + search filtering at the API level
-- When a user starts typing in the search bar, the source filter is cleared automatically by the frontend
-- Helper text shown below search bar when source filter was active: "Searching across all companies"
-- `search_by_keyword` excludes limited tier articles — enforced in SQL at the DAO level (`WHERE word_count >= 150`)
-
 ---
 
 ## Return Types
@@ -277,7 +248,8 @@ Custom exceptions live in `exceptions.py` at project root.
 ```python
 class DatabaseError(Exception): ...       # DAO layer — wraps SQLAlchemy exceptions
 class UnauthorizedError(Exception): ...   # No valid JWT present
-class AuthError(Exception): ...           # OAuth flow failure (bad state, not in allowlist, etc.)
+class AuthError(Exception): ...           # OAuth flow failure (bad state, token exchange error, etc.)
+class NotAllowedError(AuthError): ...     # Authenticated user's email not in allowlist
 class ForbiddenError(Exception): ...      # Content tier check failed
 class NotFoundError(Exception): ...       # Record not found
 class RSSFeedError(Exception): ...        # RSS feed unavailable

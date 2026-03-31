@@ -3,7 +3,6 @@
 ## Navbar
 - Guest: Logo on left, Sign In button on right
 - Signed-in: Logo on left, avatar (initials fallback), user name, Sign Out on right
-- Search bar is in the feed row, not the navbar
 
 ## Colors
 - Brand/accent color: `#4F46E5` (Electric Indigo)
@@ -16,10 +15,9 @@
 - Rich styling: company favicon/logo next to each company name, smooth open/close animation, highlighted selected state
 
 ## Feed Page Layout
-- Desktop: 3 column card grid throughout — default feed, tag filter, and search results all use the same grid layout
+- Desktop: 3 column card grid throughout — default feed and tag filter use the same grid layout
 - Mobile: single column vertical list
 - Company filter dropdown above the grid
-- Search bar + Search button in feed row, visible to all users
 - **Future consideration:** grid/list toggle for users — purely a CSS change, low effort when needed
 
 ## Card Layout
@@ -106,13 +104,3 @@
 - **Placeholder copy** (until real ads are live): self-promotion — "Know an engineer who'd love this? Share it." / "Found this summary useful? Share it."
 - Ad units are labeled "Sponsored" when real ads are active. No label on self-promotion placeholder.
 
-## Search
-- Non-signed-in: keyword search only (silently served, no explanation shown)
-- Signed-in: hybrid keyword + semantic search
-- Results shown in place — same feed page updates to show matching cards, no separate results page
-- Search returns a list of relevant blog cards, not answers — it is a discovery tool, not Q&A
-- Search bar placeholder differs by user tier:
-  - Guest: `Search eg: distributed systems, database migration` (keyword-style)
-  - Signed-in: `Search eg: how Netflix scales streaming, ML at Uber` (concept/natural language style)
-- **Note:** Finalize placeholder examples after real articles are ingested
-- **Source filter + search:** Search always runs across all sources — when a user starts typing in the search bar, the source filter is cleared automatically. Helper text shown below the search bar when a source filter is active: e.g., "Searching across all companies"

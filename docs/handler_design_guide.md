@@ -33,7 +33,7 @@ For each module, work through these five questions:
 | 4 | `summary/` | LLM + cache + refresh logic — establishes the pattern |
 | 5 | `simplify/` | Same pattern as summary |
 | 6 | `prerequisites/` | LLM + cache + refresh + junction table writes |
-| 7 | `ingest/` | Pipeline orchestration — RSS → chunk → embed → tag → prerequisites |
+| 7 | `ingest/` | Pipeline orchestration — RSS → embed → tag → prerequisites |
 
 ---
 
@@ -116,35 +116,28 @@ Happy path:
 - `tag_service: TagService`
 - `blog_prerequisite_service: BlogPrerequisiteService`
 - `prerequisite_service: PrerequisiteService`
-- `search_service: SearchService`  # used for hybrid search (signed-in users only)
 
 ---
 
-#### `get_blogs(source: str | None, tag: str | None, keyword, page, count, request) -> PaginatedBlogs`
+#### `get_blogs(source: str | None, tag: str | None, page, count, request) -> PaginatedBlogs`
 Happy path:
 1. `decode_jwt_token(request)` — if JWT present, set `is_signed_in = True`
 2. If `source` present → `blog_source_service.get_source_by_name(source)` → `source_id`
 3. If `tag` present → `tag_service.get_tag_by_name(tag)` → `tag_id`
-4. If `keyword` and `is_signed_in` → `_hybrid_search(keyword)` → `_reciprocal_rank_fusion(...)` → ordered `blog_ids` → `blog_service.list_blogs_by_ids(blog_ids, page, count)`
-5. Else → `blog_service.list_blogs(source_id, tag_id, keyword, page, count)` — DAO builds dynamic query based on present params
-6. Compute `content_tier` for each blog from `word_count` (`limited` < 150, `partial` 150–300, `full` 300+)
-7. If `is_signed_in`:
+4. `blog_service.list_blogs(source_id, tag_id, page, count)` — DAO builds dynamic query based on present params
+5. Compute `content_tier` for each blog from `word_count` (`limited` < 150, `partial` 150–300, `full` 300+)
+6. If `is_signed_in`:
    - `blog_tag_service.list_tag_ids_by_blog_ids(blog_ids)` → tag_ids per blog
    - `tag_service.list_tags_by_ids(tag_ids)` → tag names
    - Filter to `partial` and `full` tier blog_ids only → `eligible_blog_ids`
    - `blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(eligible_blog_ids)` → prerequisite_ids per blog
    - `prerequisite_service.list_prerequisites_by_ids(prerequisite_ids)` → prerequisite rows (topic names + ids)
    - Attach tags and prerequisites to each blog (prerequisites empty array for `limited` tier)
-8. Return enriched list. Note: for hybrid search results (step 4), all matching blog_ids are fetched upfront (capped at `SEARCH_RESULT_LIMIT`) and frontend paginates locally. For regular listing (step 5), server-side pagination applies via `page` and `count`.
+7. Return enriched list. Server-side pagination applies via `page` and `count`.
 
 Edge cases:
 - Guest user → tags and prerequisites are empty arrays
 - `tag` param present but not found → empty result
-- `keyword` present, guest user → keyword search only via `blog_service.list_blogs(keyword=keyword, ...)`, no `SearchService` call
-
-**Private helpers:**
-- `_hybrid_search(query: str) -> tuple[list[str], list[str]]` — embeds query inline, calls `search_service.keyword_search(query)` and `search_service.vector_search(query_embedding)`, returns both ranked lists
-- `_reciprocal_rank_fusion(keyword_results: list[str], vector_results: list[str]) -> list[str]` — applies RRF formula (`1 / (60 + rank)` summed across both lists), returns ordered `blog_ids`
 
 ---
 
@@ -277,9 +270,7 @@ Edge cases:
 - `blog_tag_service: BlogTagService`
 - `prerequisite_service: PrerequisiteService`
 - `blog_prerequisite_service: BlogPrerequisiteService`
-- `blog_chunk_service: BlogChunkService`
 - `rss_client: RSSClient`
-- `chunker: Chunker`
 - `embedder: Embedder`
 
 ---
@@ -295,14 +286,12 @@ Happy path:
       - `_fetch_thumbnail(link)` — scrape og:image, null on failure
       - `blog_service.insert_blog(...)` — insert blog row
       - `rss_client.get_content(feed_url, guid)` — extract article text from RSS feed item (no scraping)
-      - `_chunk_and_embed(blog_id, content)` — chunk content, embed chunks, store via `blog_chunk_service`
       - `call_llm(prompt + content)` with prompt from `prompts/ingest.py` — returns tags, prerequisites
       - For each tag: `_process_tag(blog_id, tag_name)`
       - For each prerequisite: `_process_prerequisite(blog_id, topic_name)`
 
 **Private helpers:**
 - `_fetch_thumbnail(link)` — scrapes og:image, returns url or None
-- `_chunk_and_embed(blog_id, content)` — `chunker` splits content into chunks, `embedder` generates vectors, `blog_chunk_service.create_chunk()` stores each chunk
 - `_process_tag(blog_id, tag_name)` — normalize `tag_name` (lowercase, strip, collapse hyphens/underscores/spaces to `-`) → `self.embedder.embed(normalized)` → `tag_service.find_similar_tag(embedding, threshold)` → returns `tuple[Tag | None, float | None]` (match, score). Open a `tag.normalize` OTel span using `tracer = trace.get_tracer("enggsystemfeed.ingest")` defined at module level. Record span attributes: `tag.candidate` (raw LLM output), `tag.normalized`, `tag.similarity_score` (if score not None). If match is not None → `tag.action = "merge"`, record `tag.canonical = match.name`, use existing `tag_id`, discard new embedding. If match is None → `tag.action = "insert"`, `tag_service.create_tag(normalized, embedding)` — stores name + embedding together, use new `tag_id`. Then `blog_tag_service.create_blog_tag(blog_id, tag_id)`.
 - `_process_prerequisite(blog_id, topic_name)` — identical pattern. Normalize `topic_name` → embed → `prerequisite_service.find_similar_prerequisite(embedding, threshold)` → `tuple[Prerequisite | None, float | None]`. Open a `prerequisite.normalize` OTel span. Record: `prerequisite.candidate`, `prerequisite.normalized`, `prerequisite.similarity_score` (if not None), `prerequisite.action` (merge/insert), `prerequisite.canonical` (on merge). Insert or merge accordingly. Then `blog_prerequisite_service.create_blog_prerequisite(blog_id, prerequisite_id)`.
 

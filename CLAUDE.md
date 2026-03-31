@@ -2,16 +2,15 @@
 
 ## Project Brief
 
-A one-stop aggregator for engineering blogs from big tech companies. Users can browse, filter by company, search articles, and read the full article on the original site. Signed-in users additionally get tags, prerequisite topics, hybrid semantic search, on-demand summaries, and simplified (ELI5) explanations.
+A one-stop aggregator for engineering blogs from big tech companies. Users can browse and filter by company. Signed-in users additionally get browsable topic tags, prerequisite topics, on-demand summaries, and simplified (ELI5) explanations.
 
 **Stack:** FastAPI (backend) + Alpine.js (frontend) + PostgreSQL + Redis
 
 **Key design decisions:**
-- Guest users: keyword search only. Signed-in users: hybrid keyword + semantic search.
 - Content is not stored — fetched on demand for LLM calls, raw content discarded after.
 - Summary and simplify are regenerated every 7 days — DB and cache both updated. Tags are stable once set.
-- RSS feeds polled once per day. Articles inserted oldest-first; last DB record per feed is always the most recent article.
-- Vector store: pgvector (Postgres extension, no extra service).
+- RSS feeds polled once per day via GitHub Actions. Articles inserted oldest-first; last DB record per feed is always the most recent article.
+- pgvector used for tag and prerequisite normalization at ingest (cosine similarity) — not for search.
 
 ## Design Docs
 
@@ -84,14 +83,10 @@ enggsystemfeed/
 │   ├── schemas.py
 │   ├── service.py
 │   └── handler.py
-├── search/
-│   ├── __init__.py
-│   ├── service.py
-│   └── dao.py
 ├── ingest/
 │   ├── __init__.py
+│   ├── controller.py
 │   ├── handler.py
-│   ├── chunker.py
 │   └── embedder.py
 ├── prompts/
 │   ├── __init__.py
@@ -106,13 +101,12 @@ enggsystemfeed/
 | Module | Responsible for |
 |--------|----------------|
 | `auth/` | Google OAuth flow, state token verification, allowlist check, JWT issuance and validation |
-| `blog/` | Blog listing, filtering by source and tag, keyword search, pagination. Also owns `BlogSource` and `BlogChunk` DAO and Service |
+| `blog/` | Blog listing, filtering by source and tag, pagination. Also owns `BlogSource` DAO and Service |
 | `summary/` | On-demand summary generation, 7-day refresh logic, cache management via `@cache.cached` |
 | `simplify/` | ELI5 generation, 7-day refresh logic, cache management |
 | `tags/` | Tag lookup by name, tag filtering on feed. Owns `Tag` and `BlogTag` DAO and Service |
 | `prerequisites/` | On-demand prerequisite explanation generation, 7-day refresh logic, cache management. Owns `Prerequisite` and `BlogPrerequisite` DAO and Service |
-| `search/` | Hybrid search for signed-in users — keyword search (tsvector) and vector search (pgvector). No handler or controller — search is routed through `BlogHandler` |
-| `ingest/` | RSS polling, og:image scraping, chunking, embedding, storing articles, tagging pipeline, prerequisites extraction |
+| `ingest/` | RSS polling, og:image scraping, embedding, storing articles, tagging pipeline, prerequisites extraction. Exposes `POST /api/v1/ingest` endpoint triggered by GitHub Actions daily cron |
 | `prompts/` | All LLM prompt templates — `summary.py`, `simplify.py`, `prerequisites.py`, `ingest.py` |
 
 **Rules:**
