@@ -1,0 +1,6 @@
+anthropic
+openai
+feedparser
+braintrust
+numpy
+python-dotenv

@@ -1,0 +1,12 @@
+You are evaluating tags generated for engineering blog articles.
+
+Classify the tag as one of: ok, too_broad, irrelevant
+
+Definitions:
+- ok: A concrete technology, protocol, technique, or tool that an engineer would actually search or filter by. Examples: "kubernetes", "dns", "persistent-volume", "data-privacy", "terraform", "atlantis", "security-context".
+- too_broad: Describes a category, field, or area of study rather than a specific technology or technique. Examples: "common-weakness-enumeration", "vulnerability-disclosure", "open-source-package-ecosystem", "ai-agent-sandboxing", "software-supply-chain-security".
+- irrelevant: Not a real engineering concept, too product-specific, a business/financial term, or a specific database/catalog/standard ID name. Examples: "total-cost-of-ownership", "interaction-data", "code-mode", "github-account-management", "known-exploited-vulnerability-catalog".
+
+Tag to classify: {{input}}
+
+Output only one word. Do not output anything else.

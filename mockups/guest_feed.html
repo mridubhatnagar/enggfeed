@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnggSystemBlogs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F9FAFB;
+      color: #111827;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4F46E5;
+      letter-spacing: -0.5px;
+    }
+
+    .btn-signin {
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+
+    .btn-signin:hover { background: #4338CA; }
+
+    /* ── Flash message ── */
+    .flash {
+      background: #FEF2F2;
+      border-bottom: 1px solid #FECACA;
+      color: #B91C1C;
+      text-align: center;
+      padding: 10px 32px;
+      font-size: 14px;
+      display: none;
+    }
+
+    /* ── Feed row (filters + search) ── */
+    .feed-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 32px 0;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .company-select {
+      appearance: none;
+      background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E") no-repeat right 12px center;
+      border: 1px solid #D1D5DB;
+      border-radius: 6px;
+      padding: 8px 36px 8px 12px;
+      font-size: 14px;
+      color: #374151;
+      cursor: pointer;
+      min-width: 180px;
+    }
+
+    .company-select:focus { outline: none; border-color: #4F46E5; }
+
+    .search-wrapper {
+      display: flex;
+      flex: 1;
+      gap: 8px;
+    }
+
+    .search-input {
+      flex: 1;
+      border: 1px solid #D1D5DB;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 14px;
+      color: #374151;
+    }
+
+    .search-input:focus { outline: none; border-color: #4F46E5; }
+
+    .btn-search {
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      padding: 8px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-search:hover { background: #4338CA; }
+
+    /* ── Card Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 24px 32px 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.2s;
+    }
+
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+
+    .card-thumbnail {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .card-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .company-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: #4F46E5;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+    }
+
+    /* external link signal */
+    .card-thumbnail::after {
+      content: '↗';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      font-size: 12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .card-title:hover { color: #4F46E5; }
+
+    /* Tags row — hidden for guests, shown as locked placeholder */
+    .card-tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      min-height: 22px;
+    }
+
+    /* Limited badge */
+    .badge-limited {
+      display: inline-block;
+      background: #DC2626;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1.5px solid #4F46E5;
+      background: #4F46E5;
+      color: #fff;
+      position: relative;
+    }
+
+    .btn-action:hover { background: #4338CA; border-color: #4338CA; }
+
+    /* Locked button state for guests */
+    .btn-action.locked {
+      border-color: #D1D5DB;
+      background: #D1D5DB;
+      color: #6B7280;
+      cursor: default;
+    }
+
+    .btn-action.locked:hover { background: #D1D5DB; border-color: #D1D5DB; }
+
+    .lock-icon {
+      font-size: 11px;
+      margin-left: 4px;
+    }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 0 32px 48px;
+    }
+
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #D1D5DB;
+      background: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #374151;
+    }
+
+    .page-btn.active {
+      background: #4F46E5;
+      border-color: #4F46E5;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .page-btn:hover:not(.active) { border-color: #4F46E5; color: #4F46E5; }
+
+    /* ── Sign In Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 48px 40px;
+      width: 380px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+    }
+
+    .modal-logo {
+      font-size: 22px;
+      font-weight: 700;
+      color: #4F46E5;
+      margin-bottom: 8px;
+    }
+
+    .modal-tagline {
+      font-size: 15px;
+      color: #6B7280;
+      margin-bottom: 32px;
+      line-height: 1.5;
+    }
+
+    .btn-google {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px;
+      border: 1.5px solid #D1D5DB;
+      border-radius: 6px;
+      background: #fff;
+      font-size: 15px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+    }
+
+    .btn-google:hover { background: #F9FAFB; border-color: #9CA3AF; }
+
+    .google-icon {
+      width: 20px;
+      height: 20px;
+    }
+
+    .modal-close {
+      margin-top: 20px;
+      background: none;
+      border: none;
+      color: #9CA3AF;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .modal-close:hover { color: #6B7280; }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; padding: 16px; }
+      .feed-controls { flex-direction: column; padding: 16px; }
+      .search-wrapper { width: 100%; }
+      nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-logo">EnggSystemBlogs</div>
+    <button class="btn-signin" onclick="document.getElementById('signinModal').classList.add('open')">Sign In</button>
+  </nav>
+
+  <!-- Flash message (hidden by default) -->
+  <div class="flash" id="flashMsg">Sorry, we are unable to process your request. Please try again after some time.</div>
+
+  <!-- Feed Controls -->
+  <div class="feed-controls">
+    <select class="company-select">
+      <option value="">All Companies</option>
+      <option>Cloudflare</option>
+      <option>GitHub</option>
+      <option>Meta</option>
+      <option>AWS</option>
+      <option>Slack Engineering</option>
+      <option>Netflix</option>
+      <option>Airbnb</option>
+      <option>Dropbox</option>
+      <option>Fly.io</option>
+      <option>Discord</option>
+      <option>Spotify</option>
+      <option>Google Developers</option>
+      <option>Stripe</option>
+    </select>
+    <div class="search-wrapper">
+      <input class="search-input" type="text" placeholder="Search eg: distributed systems, database migration" />
+      <button class="btn-search">Search</button>
+    </div>
+  </div>
+
+  <!-- Card Grid -->
+  <div class="grid">
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/6366F1/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Cloudflare</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">How We Built a Global Anycast Network at Cloudflare</div>
+        <div class="card-tags"><!-- tags hidden for guests --></div>
+        <div class="card-actions">
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Summary <span class="lock-icon">🔒</span></button>
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Simplify <span class="lock-icon">🔒</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/8B5CF6/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">GitHub</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Rethinking Open Source Mentorship in the AI Era</div>
+        <div class="card-tags"></div>
+        <div class="card-actions">
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Summary <span class="lock-icon">🔒</span></button>
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Simplify <span class="lock-icon">🔒</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/EC4899/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Meta</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Ranking Engineer Agent: Autonomous ML Experimentation at Meta</div>
+        <div class="card-tags"></div>
+        <div class="card-actions">
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Summary <span class="lock-icon">🔒</span></button>
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Simplify <span class="lock-icon">🔒</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Limited tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/F59E0B/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Stripe</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Building Reliable Payment Infrastructure at Scale</div>
+        <div class="card-tags">
+          <span class="badge-limited">Limited Content — Not in search results</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action" onclick="window.open('#', '_blank')">Full Read ↗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/10B981/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">AWS</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Introducing Amazon S3 Express One Zone Storage Class</div>
+        <div class="card-tags"></div>
+        <div class="card-actions">
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Summary <span class="lock-icon">🔒</span></button>
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Simplify <span class="lock-icon">🔒</span></button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/3B82F6/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Dropbox</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Using DSPy to Optimize Our Relevance Judge Pipeline</div>
+        <div class="card-tags"></div>
+        <div class="card-actions">
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Summary <span class="lock-icon">🔒</span></button>
+          <button class="btn-action locked" onclick="document.getElementById('signinModal').classList.add('open')">Simplify <span class="lock-icon">🔒</span></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <button class="page-btn">←</button>
+    <button class="page-btn active">1</button>
+    <button class="page-btn">2</button>
+    <button class="page-btn">3</button>
+    <button class="page-btn">→</button>
+  </div>
+
+  <!-- Sign In Modal -->
+  <div class="modal-overlay" id="signinModal">
+    <div class="modal" style="position:relative;">
+      <button onclick="document.getElementById('signinModal').classList.remove('open')" style="position:absolute;top:14px;right:16px;background:none;border:none;font-size:20px;color:#9CA3AF;cursor:pointer;line-height:1;">✕</button>
+      <div class="modal-logo">EnggSystemBlogs</div>
+      <div class="modal-tagline">One place to read, discover and understand<br/>engineering blogs from the best in tech.</div>
+      <button class="btn-google">
+        <svg class="google-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Sign in with Google
+      </button>
+      <button class="modal-close" onclick="document.getElementById('signinModal').classList.remove('open')">Cancel</button>
+    </div>
+  </div>
+
+</body>
+</html>

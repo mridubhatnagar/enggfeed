@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnggFeed</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body
+  x-data="app()"
+  x-init="_init()"
+  @keydown.escape.window="handleEsc()"
+>
+
+  <!-- ─── Navbar ────────────────────────────────────────────────── -->
+  <nav class="navbar">
+    <a class="navbar-logo" href="/" @click.prevent="goFeed()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      EnggFeed
+    </a>
+
+    <div class="navbar-spacer"></div>
+
+    <!-- Guest state -->
+    <template x-if="!user">
+      <button class="btn-signin" @click="showSigninModal = true">Sign In</button>
+    </template>
+
+    <!-- Signed-in state -->
+    <template x-if="user">
+      <div class="navbar-user">
+        <div class="avatar">
+          <template x-if="user.profile_url">
+            <img :src="user.profile_url" :alt="user.name" @error="$event.target.style.display='none'" />
+          </template>
+          <span x-show="!user.profile_url" x-text="initials(user.name)"></span>
+        </div>
+        <span class="navbar-name" x-text="user.name"></span>
+        <button class="btn-signout" @click="signOut()">Sign Out</button>
+      </div>
+    </template>
+  </nav>
+
+  <!-- ─── Flash message bar ────────────────────────────────────── -->
+  <div x-show="flashMessage" x-cloak class="flash-bar" role="alert">
+    <span x-text="flashMessage"></span>
+    <button class="flash-close" @click="flashMessage = ''" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       FEED VIEW
+  ═══════════════════════════════════════════════════════════════ -->
+  <div x-show="currentView === 'feed'" x-cloak>
+
+    <!-- ─── Filter strip (sticky below navbar) ────────────────── -->
+    <div class="filter-strip">
+
+      <!-- Company row -->
+      <div class="filter-row">
+        <span class="filter-row-label">Company</span>
+        <div class="filter-scroll-wrap">
+          <div class="filter-scroll">
+            <!-- All companies pill -->
+            <button
+              class="filter-pill"
+              :class="{ active: activeSources.length === 0 }"
+              @click="activeSources = []; _pushUrl(); _fetchBlogs()"
+              type="button"
+            >All</button>
+            <template x-for="src in sources" :key="src.id">
+              <button
+                class="filter-pill"
+                :class="{ active: activeSources.includes(src.source) }"
+                @click="toggleSource(src.source)"
+                type="button"
+              >
+                <img
+                  class="filter-pill-favicon"
+                  :src="'https://www.google.com/s2/favicons?domain=' + sourceToFaviconDomain(src.source) + '&sz=32'"
+                  :alt="src.source"
+                  @error="$event.target.style.display='none'"
+                />
+                <span x-text="src.source"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+      </div>
+
+      <!-- Topic row (signed-in only) -->
+      <template x-if="user && tags.length > 0">
+        <div class="filter-row">
+          <span class="filter-row-label">Topic</span>
+          <div class="filter-scroll-wrap">
+            <div class="filter-scroll">
+              <template x-for="t in tags" :key="t.tag">
+                <button
+                  class="filter-pill"
+                  :class="{ active: activeTags.includes(t.tag) }"
+                  @click="toggleTag(t.tag)"
+                  type="button"
+                >
+                  <span x-text="t.tag"></span>
+                  <span class="filter-pill-count" x-text="t.count"></span>
+                </button>
+              </template>
+            </div>
+          </div>
+        </div>
+      </template>
+
+    </div><!-- /filter-strip -->
+
+    <div class="main-wrap">
+
+      <!-- Loading spinner -->
+      <div class="spinner-wrap" x-show="feedLoading" x-cloak>
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Empty state -->
+      <div class="empty-state" x-show="!feedLoading && blogs.length === 0 && allLoaded" x-cloak>
+        <svg width="220" height="160" viewBox="0 0 220 160" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <rect width="220" height="160" rx="12" fill="#f3f4f6"/>
+          <circle cx="95" cy="75" r="30" stroke="#d1d5db" stroke-width="6" fill="none"/>
+          <line x1="117" y1="97" x2="137" y2="117" stroke="#d1d5db" stroke-width="6" stroke-linecap="round"/>
+          <line x1="83" y1="63" x2="107" y2="87" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+          <line x1="107" y1="63" x2="83" y2="87" stroke="#4F46E5" stroke-width="4" stroke-linecap="round" opacity="0.5"/>
+        </svg>
+        <p class="empty-title">No articles found for the selected filters</p>
+        <p class="empty-sub">Try selecting different companies or topics.</p>
+        <button class="btn-clear-filters" @click="clearFilters()">Clear Filters</button>
+      </div>
+
+      <!-- Card grid -->
+      <div x-show="!feedLoading && blogs.length > 0" x-cloak>
+        <div class="card-grid">
+          <template x-for="(blog, index) in blogs" :key="blog.id">
+            <div style="display: contents;" x-data="{ prereqsExpanded: false, tagsExpanded: false }">
+
+              <!-- Ad strip after first row (after index 2, i.e. the 3rd card) -->
+              <template x-if="index === 3">
+                <div class="ad-strip">
+                  <div class="ad-unit">
+                    <div class="ad-body">
+                      <div class="ad-headline">Know an engineer who'd love this?</div>
+                      <div class="ad-description">One feed for every major engineering blog. Browse by topic or company, get AI summaries, ELI5 explanations, and prerequisites. Everything you need to stay sharp.</div>
+                    </div>
+                    <a class="ad-cta" href="#" @click.prevent="copyUrl(window.location.origin)" x-text="copied ? 'Copied!' : 'Share'"></a>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Share strip after index 15 -->
+              <template x-if="index === 15">
+                <div class="ad-strip">
+                  <div class="ad-unit">
+                    <div class="ad-body">
+                      <div class="ad-headline">Enjoying the feed? Share it with a friend</div>
+                      <div class="ad-description">Netflix, Cloudflare, Stripe, and more — all in one place. Filter by topic, read what matters, understand it faster.</div>
+                    </div>
+                    <a class="ad-cta" href="#" @click.prevent="copyUrl(window.location.origin)" x-text="copied ? 'Copied!' : 'Share'"></a>
+                  </div>
+                </div>
+              </template>
+
+              <!-- Blog card -->
+              <article class="card">
+
+                <!-- Thumbnail (clickable → opens original in new tab) -->
+                <a :href="blog.link" target="_blank" rel="noopener noreferrer" class="card-thumb-link" :aria-label="'Read ' + blog.title + ' on ' + blog.source">
+                  <template x-if="blog.thumbnail">
+                    <img class="card-thumb" :src="blog.thumbnail" :alt="blog.title" loading="lazy" />
+                  </template>
+                  <template x-if="!blog.thumbnail">
+                    <div class="card-thumb-placeholder">
+                      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <circle cx="8.5" cy="8.5" r="1.5"/>
+                        <polyline points="21 15 16 10 5 21"/>
+                      </svg>
+                    </div>
+                  </template>
+                  <!-- Company name badge -->
+                  <span class="card-company-badge" x-text="blog.source"></span>
+                  <!-- New-tab hint -->
+                  <span class="card-new-tab-hint" aria-hidden="true">&#8599;</span>
+                </a>
+
+                <div class="card-body">
+
+                  <!-- Title (clickable → opens original in new tab) -->
+                  <a :href="blog.link" target="_blank" rel="noopener noreferrer" class="card-title" x-text="blog.title"></a>
+
+                  <!-- Published date -->
+                  <p class="card-published" x-text="formatDateShort(blog.published_at)"></p>
+
+                  <!-- Limited content badge -->
+                  <template x-if="blog.content_tier === 'LIMITED'">
+                    <div class="chips-row">
+                      <span class="badge-limited">
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10"/>
+                          <line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        Limited content
+                      </span>
+                    </div>
+                  </template>
+
+                  <!-- Prerequisites chips (signed-in, Partial + Full tier only) -->
+                  <template x-if="user && blog.content_tier !== 'LIMITED' && blog.prerequisites && blog.prerequisites.length > 0">
+                    <div class="chips-section">
+                      <div class="chip-section-label">Prerequisites</div>
+                      <div class="chips-row" role="list" aria-label="Prerequisites">
+                        <template x-for="prereq in (prereqsExpanded ? blog.prerequisites : blog.prerequisites.slice(0, 3))" :key="prereq">
+                          <button
+                            class="chip chip-prereq"
+                            role="listitem"
+                            @click="openPrereqModal(prereq)"
+                            :title="prereq"
+                            x-text="prereq"
+                          ></button>
+                        </template>
+                        <template x-if="blog.prerequisites.length > 3">
+                          <button
+                            class="chip chip-more"
+                            @click="prereqsExpanded = !prereqsExpanded"
+                            x-text="prereqsExpanded ? 'Show less' : '+' + (blog.prerequisites.length - 3) + ' more'"
+                          ></button>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Tags chips (signed-in only) -->
+                  <template x-if="user && blog.content_tier !== 'LIMITED' && blog.tags && blog.tags.length > 0">
+                    <div class="chips-section">
+                      <div class="chip-section-label">Tags</div>
+                      <div class="chips-row" role="list" aria-label="Tags">
+                        <template x-for="tag in (tagsExpanded ? blog.tags : blog.tags.slice(0, 3))" :key="tag">
+                          <button
+                            class="chip chip-tag"
+                            role="listitem"
+                            @click="filterByTag(tag)"
+                            :title="'Filter by ' + tag"
+                            x-text="tag"
+                          ></button>
+                        </template>
+                        <template x-if="blog.tags.length > 3">
+                          <button
+                            class="chip chip-more"
+                            @click="tagsExpanded = !tagsExpanded"
+                            x-text="tagsExpanded ? 'Show less' : '+' + (blog.tags.length - 3) + ' more'"
+                          ></button>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <!-- Action buttons -->
+                  <div class="card-actions">
+
+                    <!-- Summary button: hidden for LIMITED, locked for guests, active for signed-in -->
+                    <button x-show="blog.content_tier !== 'LIMITED' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to read summary">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Summary
+                    </button>
+                    <button x-show="blog.content_tier !== 'LIMITED' && user" class="btn-card-action" @click="openSummary(blog.id)">
+                      Summary
+                    </button>
+
+                    <!-- Simplify button: FULL tier only, locked for guests, hidden for Partial -->
+                    <button x-show="blog.content_tier === 'FULL' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to simplify">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                      Simplify
+                    </button>
+                    <button x-show="blog.content_tier === 'FULL' && user" class="btn-card-action" @click="openSimplify(blog.id)">
+                      Simplify
+                    </button>
+
+                  </div><!-- /card-actions -->
+
+                </div><!-- /card-body -->
+              </article><!-- /card -->
+
+            </div><!-- /display:contents wrapper -->
+          </template>
+        </div><!-- /card-grid -->
+
+        <!-- Infinite scroll sentinel -->
+        <div id="scroll-sentinel" class="scroll-sentinel"></div>
+
+        <!-- Scroll loading indicator -->
+        <div class="scroll-loading" x-show="scrollLoading" x-cloak>
+          <div class="spinner-sm"></div>
+        </div>
+      </div>
+
+    </div><!-- /main-wrap -->
+  </div><!-- /feed view -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SUMMARY VIEW
+  ═══════════════════════════════════════════════════════════════ -->
+  <div x-show="currentView === 'summary'" x-cloak>
+    <div class="detail-page">
+
+      <!-- Loading spinner -->
+      <div class="spinner-wrap" x-show="detailLoading" x-cloak>
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Content -->
+      <template x-if="!detailLoading && summaryDetail">
+        <div>
+          <!-- Thumbnail -->
+          <div class="detail-thumb-wrap">
+            <template x-if="summaryDetail?.blog?.thumbnail">
+              <img class="detail-thumb" :src="summaryDetail?.blog?.thumbnail" :alt="summaryDetail?.blog?.title" />
+            </template>
+            <template x-if="!summaryDetail?.blog?.thumbnail">
+              <div class="detail-thumb-placeholder">
+                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+            </template>
+          </div>
+
+          <!-- Attribution line -->
+          <p class="detail-attribution">
+            Original blog is by <strong x-text="summaryDetail?.blog?.source"></strong>.
+            You are seeing an AI generated summary of the original blog.
+          </p>
+
+          <!-- Title -->
+          <h1 class="detail-title" x-text="summaryDetail?.blog?.title"></h1>
+
+          <!-- Published date -->
+          <p class="detail-published" x-text="'Published on ' + formatDate(summaryDetail?.blog?.published_at)"></p>
+
+          <!-- Prerequisites (all shown, no truncation) -->
+          <template x-if="summaryDetail?.blog?.prerequisites && summaryDetail?.blog?.prerequisites.length > 0">
+            <div class="detail-chips-section">
+              <div class="detail-chips-label">Prerequisites</div>
+              <div class="chips-row">
+                <template x-for="prereq in summaryDetail?.blog?.prerequisites" :key="prereq">
+                  <button class="chip chip-prereq" @click="openPrereqModal(prereq)" x-text="prereq"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Tags (all shown, clickable → navigates back to feed filtered by tag) -->
+          <template x-if="summaryDetail?.blog?.tags && summaryDetail?.blog?.tags.length > 0">
+            <div class="detail-chips-section">
+              <div class="detail-chips-label">Tags</div>
+              <div class="chips-row">
+                <template x-for="tag in summaryDetail?.blog?.tags" :key="tag">
+                  <button class="chip chip-tag" @click="filterByTagFromDetail(tag)" x-text="tag"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <hr class="detail-divider" />
+
+          <!-- Generated summary content -->
+          <div class="detail-content">
+            <!-- short_summary: only rendered if non-empty -->
+            <template x-if="summaryDetail?.summary?.short_summary">
+              <p class="detail-short-summary" x-text="summaryDetail?.summary?.short_summary"></p>
+            </template>
+            <!-- key_points: only rendered if non-empty array -->
+            <template x-if="summaryDetail?.summary?.key_points && summaryDetail?.summary?.key_points.length > 0">
+              <div>
+                <div class="detail-key-points-label">Key Points</div>
+                <ul class="detail-key-points">
+                  <template x-for="point in summaryDetail?.summary?.key_points" :key="point">
+                    <li x-text="point"></li>
+                  </template>
+                </ul>
+              </div>
+            </template>
+          </div>
+
+          <!-- Ad slot (between content and bottom buttons) -->
+          <div class="detail-ad">
+            <div class="ad-unit">
+              <div class="ad-body">
+                <div class="ad-headline">Know an engineer who'd love this?</div>
+                <div class="ad-description">One feed for every major engineering blog. Browse by topic or company, get AI summaries, ELI5 explanations, and prerequisites. Everything you need to stay sharp.</div>
+              </div>
+              <a class="ad-cta" href="#" @click.prevent="copyUrl(summaryDetail?.blog?.link || window.location.href)" x-text="copied ? 'Copied!' : 'Share'"></a>
+            </div>
+          </div>
+
+          <!-- Bottom buttons: Back | Read Original | Simplify (hidden for Partial) -->
+          <div class="detail-actions">
+            <button class="btn-back" @click="goFeed()">&larr; Back</button>
+            <a class="btn-read-original" :href="summaryDetail?.blog?.link" target="_blank" rel="noopener noreferrer">
+              Read Original &#8599;
+            </a>
+            <!-- Simplify hidden for Partial tier (only shown for Full) -->
+            <template x-if="summaryDetail?.blog?.content_tier === 'FULL'">
+              <button class="btn-switch-mode" @click="openSimplify(currentBlogId)">Simplify</button>
+            </template>
+          </div>
+        </div>
+      </template>
+
+    </div>
+  </div><!-- /summary view -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIMPLIFY VIEW
+  ═══════════════════════════════════════════════════════════════ -->
+  <div x-show="currentView === 'simplify'" x-cloak>
+    <div class="detail-page">
+
+      <!-- Loading spinner -->
+      <div class="spinner-wrap" x-show="detailLoading" x-cloak>
+        <div class="spinner"></div>
+      </div>
+
+      <!-- Content -->
+      <template x-if="!detailLoading && simplifyDetail">
+        <div>
+          <!-- Thumbnail -->
+          <div class="detail-thumb-wrap">
+            <template x-if="simplifyDetail?.blog?.thumbnail">
+              <img class="detail-thumb" :src="simplifyDetail?.blog?.thumbnail" :alt="simplifyDetail?.blog?.title" />
+            </template>
+            <template x-if="!simplifyDetail?.blog?.thumbnail">
+              <div class="detail-thumb-placeholder">
+                <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" aria-hidden="true">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+              </div>
+            </template>
+          </div>
+
+          <!-- Attribution line -->
+          <p class="detail-attribution">
+            Original blog is by <strong x-text="simplifyDetail?.blog?.source"></strong>.
+            You are seeing an AI generated simplified explanation of the original blog.
+          </p>
+
+          <!-- Title -->
+          <h1 class="detail-title" x-text="simplifyDetail?.blog?.title"></h1>
+
+          <!-- Published date -->
+          <p class="detail-published" x-text="'Published on ' + formatDate(simplifyDetail?.blog?.published_at)"></p>
+
+          <!-- Prerequisites (all shown, no truncation) -->
+          <template x-if="simplifyDetail?.blog?.prerequisites && simplifyDetail?.blog?.prerequisites.length > 0">
+            <div class="detail-chips-section">
+              <div class="detail-chips-label">Prerequisites</div>
+              <div class="chips-row">
+                <template x-for="prereq in simplifyDetail?.blog?.prerequisites" :key="prereq">
+                  <button class="chip chip-prereq" @click="openPrereqModal(prereq)" x-text="prereq"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <!-- Tags (all shown, clickable → navigates back to feed filtered by tag) -->
+          <template x-if="simplifyDetail?.blog?.tags && simplifyDetail?.blog?.tags.length > 0">
+            <div class="detail-chips-section">
+              <div class="detail-chips-label">Tags</div>
+              <div class="chips-row">
+                <template x-for="tag in simplifyDetail?.blog?.tags" :key="tag">
+                  <button class="chip chip-tag" @click="filterByTagFromDetail(tag)" x-text="tag"></button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <hr class="detail-divider" />
+
+          <!-- Generated simplify content -->
+          <div class="detail-content">
+            <!-- content: only rendered if non-empty -->
+            <template x-if="simplifyDetail?.simplify?.content">
+              <p class="detail-simplify-text" x-text="simplifyDetail?.simplify?.content"></p>
+            </template>
+          </div>
+
+          <!-- Ad slot (between content and bottom buttons) -->
+          <div class="detail-ad">
+            <div class="ad-unit">
+              <div class="ad-body">
+                <div class="ad-headline">Know an engineer who'd love this?</div>
+                <div class="ad-description">One feed for every major engineering blog. Browse by topic or company, get AI summaries, ELI5 explanations, and prerequisites. Everything you need to stay sharp.</div>
+              </div>
+              <a class="ad-cta" href="#" @click.prevent="copyUrl(simplifyDetail?.blog?.link || window.location.href)" x-text="copied ? 'Copied!' : 'Share'"></a>
+            </div>
+          </div>
+
+          <!-- Bottom buttons: Back | Read Original | Summary -->
+          <div class="detail-actions">
+            <button class="btn-back" @click="goFeed()">&larr; Back</button>
+            <a class="btn-read-original" :href="simplifyDetail?.blog?.link" target="_blank" rel="noopener noreferrer">
+              Read Original &#8599;
+            </a>
+            <button class="btn-switch-mode" @click="openSummary(currentBlogId)">Summary</button>
+          </div>
+        </div>
+      </template>
+
+    </div>
+  </div><!-- /simplify view -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       PREREQUISITES MODAL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div
+    class="modal-backdrop"
+    x-show="showPrereqModal"
+    x-cloak
+    @click.self="showPrereqModal = false"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="prereqTopic"
+  >
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" x-text="prereqTopic"></h2>
+        <button class="modal-close" @click="showPrereqModal = false" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Loading spinner -->
+        <div class="spinner-wrap" x-show="prereqLoading" x-cloak style="padding: 32px 0;">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- Content (Primer by default; Deep dive revealed on Read more) -->
+        <template x-if="!prereqLoading && prereqDetail">
+          <div>
+            <!-- Definition (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.definition">
+              <p class="prereq-definition" x-text="prereqDetail?.primer?.definition"></p>
+            </template>
+
+            <!-- Why it matters (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.why_it_matters">
+              <div class="prereq-block">
+                <div class="prereq-block-label">Why it matters</div>
+                <p class="prereq-block-text" x-text="prereqDetail?.primer?.why_it_matters"></p>
+              </div>
+            </template>
+
+            <!-- Example (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.example">
+              <div class="prereq-block">
+                <div class="prereq-block-label">Example</div>
+                <p class="prereq-block-text" x-text="prereqDetail?.primer?.example"></p>
+              </div>
+            </template>
+
+            <!-- "Read more" button — only shown if deep_dive exists and not yet expanded -->
+            <template x-if="prereqDetail?.deep_dive && !prereqShowDeepDive">
+              <button class="btn-read-more" @click="prereqShowDeepDive = true">Read more</button>
+            </template>
+
+            <!-- Deep dive section (revealed after Read more) -->
+            <template x-if="prereqDetail?.deep_dive && prereqShowDeepDive">
+              <div class="prereq-deep-dive">
+                <div class="prereq-deep-label">Deep Dive</div>
+                <p class="prereq-deep-text" x-text="prereqDetail.deep_dive"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </div><!-- /prereq modal -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       SIGN IN MODAL
+  ═══════════════════════════════════════════════════════════════ -->
+  <div
+    class="modal-backdrop"
+    x-show="showSigninModal"
+    x-cloak
+    @click.self="showSigninModal = false"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Sign in"
+  >
+    <div class="modal-box signin-modal">
+      <div class="modal-header" style="justify-content: flex-end; padding-bottom: 0;">
+        <button class="modal-close" @click="showSigninModal = false" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body" style="text-align: center; padding-top: 8px;">
+        <div class="signin-logo">EnggFeed</div>
+        <p class="signin-tagline">
+          Discover &amp; understand engineering insights from top tech companies.<br>
+          Sign in to unlock browsable topic tags, summaries, ELI5 explanations, and prerequisites.
+        </p>
+        <!-- Fetch auth URL first (sets oauth_state cookie), then redirect -->
+        <a class="btn-google" href="#" @click.prevent="
+          fetch('/auth/initiate')
+            .then(r => r.json())
+            .then(data => { window.location.href = data.data.auth_url })
+        ">
+          <!-- Google "G" logo SVG -->
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+          </svg>
+          Sign in with Google
+        </a>
+      </div>
+    </div>
+  </div><!-- /signin modal -->
+
+
+  <!-- ═══════════════════════════════════════════════════════════════
+       Alpine.js Application Logic
+  ═══════════════════════════════════════════════════════════════ -->
+  <script src="/static/js/app.js"></script>
+
+</body>
+</html>

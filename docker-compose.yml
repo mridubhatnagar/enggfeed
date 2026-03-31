@@ -1,0 +1,67 @@
+services:
+  app:
+    build: .
+    container_name: app_enggsystemfeed
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    depends_on:
+      - postgresql
+      - redis
+
+  postgresql:
+    image: pgvector/pgvector:pg16
+    container_name: postgresql_enggsystemfeed
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin_enggsystemfeed
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgresql
+
+  redis:
+    image: redis:7
+    container_name: redis_enggsystemfeed
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redisinsight_enggsystemfeed
+    ports:
+      - "5540:5540"
+    volumes:
+      - redisinsight_data:/data
+    depends_on:
+      - redis
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    container_name: phoenix_enggsystemfeed
+    ports:
+      - "6006:6006"
+      - "4317:4317"
+      - "4318:4318"
+    environment:
+      - PHOENIX_WORKING_DIR=/phoenix
+    volumes:
+      - phoenix_data:/phoenix
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+  redis_data:
+  redisinsight_data:
+  phoenix_data:

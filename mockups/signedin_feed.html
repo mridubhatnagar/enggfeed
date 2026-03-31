@@ -1,0 +1,1132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnggSystemBlogs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F9FAFB;
+      color: #111827;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4F46E5;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #4F46E5;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      letter-spacing: 0.5px;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .btn-signout {
+      background: none;
+      border: 1px solid #D1D5DB;
+      color: #6B7280;
+      padding: 6px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-signout:hover { border-color: #9CA3AF; color: #374151; }
+
+    /* ── Flash message ── */
+    .flash {
+      background: #FEF2F2;
+      border-bottom: 1px solid #FECACA;
+      color: #B91C1C;
+      text-align: center;
+      padding: 10px 32px;
+      font-size: 14px;
+      display: none;
+    }
+
+    /* ── Filter Strip ── */
+    .filter-strip {
+      background: #F9FAFB;
+      padding: 0;
+    }
+
+    .filter-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 10px 32px;
+    }
+
+    .filter-row + .filter-row {
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .filter-row-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #9CA3AF;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+      flex-shrink: 0;
+      width: 60px;
+    }
+
+    /* ── Tag Browser ── */
+    .tag-browser-strip {
+      background: #1E293B;
+      margin-top: 12px;
+    }
+
+    .tag-browser {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .tag-browser-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94A3B8;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .tag-browser-scroll-wrap {
+      position: relative;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .tag-browser-scroll-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 48px; height: 100%;
+      background: linear-gradient(to right, transparent, #F9FAFB);
+      pointer-events: none;
+    }
+
+    .tag-browser-scroll {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+
+    .tag-browser-scroll::-webkit-scrollbar { display: none; }
+
+    .tag-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1.5px solid #E5E7EB;
+      background: #fff;
+      color: #374151;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .tag-pill:hover { border-color: #4F46E5; color: #4F46E5; background: #EEF2FF; }
+
+    .tag-pill.active {
+      background: #4F46E5;
+      border-color: #4F46E5;
+      color: #fff;
+    }
+
+    .tag-pill-count {
+      font-size: 10px;
+      font-weight: 700;
+      opacity: 0.5;
+    }
+
+    /* ── Card Grid ── */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      padding: 24px 32px 0;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .grid + .grid { padding-top: 0; padding-bottom: 40px; }
+
+    /* ── Ad Strip ── */
+    .ad-strip {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px 32px;
+    }
+
+    .ad-unit {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 14px 18px;
+      position: relative;
+    }
+
+    .ad-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #F3F4F6;
+    }
+
+    .ad-body { flex: 1; }
+
+    .ad-headline {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 3px;
+    }
+
+    .ad-description {
+      font-size: 13px;
+      color: #6B7280;
+      line-height: 1.4;
+    }
+
+    .ad-cta {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4F46E5;
+      border: 1.5px solid #4F46E5;
+      padding: 7px 16px;
+      border-radius: 6px;
+      white-space: nowrap;
+      cursor: pointer;
+      background: none;
+      text-decoration: none;
+    }
+
+    .ad-cta:hover { background: #EEF2FF; }
+
+    .ad-label {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: #9CA3AF;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: box-shadow 0.2s;
+    }
+
+    .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+
+    .card-thumbnail {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .card-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .company-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      background: #4F46E5;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 3px;
+      letter-spacing: 0.3px;
+    }
+
+    .card-thumbnail::after {
+      content: '↗';
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      font-size: 12px;
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #111827;
+      line-height: 1.4;
+      cursor: pointer;
+    }
+
+    .card-title:hover { color: #4F46E5; }
+
+    /* ── Prerequisites ── */
+    .card-prereqs {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+    }
+
+    .prereq-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .prereq-chip {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 3px;
+      border: 1px solid #4F46E5;
+      color: #4F46E5;
+      background: #EEF2FF;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .prereq-chip:hover { background: #4F46E5; color: #fff; }
+
+    .prereq-more {
+      font-size: 11px;
+      color: #6B7280;
+      padding: 3px 4px;
+      align-self: center;
+    }
+
+    /* ── Tags ── */
+    .card-tags {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .tags-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #1E1B4B;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .tag:hover { background: #4F46E5; }
+
+    .tag-more {
+      display: inline-block;
+      background: #F3F4F6;
+      color: #6B7280;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+
+    /* Limited badge */
+    .badge-limited {
+      display: inline-block;
+      background: #DC2626;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+    }
+
+    /* ── Card footer (actions + flag) ── */
+    .card-footer {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-flag {
+      background: none;
+      border: none;
+      font-size: 11px;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-flag:hover { color: #EF4444; }
+
+    /* ── Feedback Modal ── */
+    .feedback-modal .modal {
+      max-width: 420px;
+    }
+
+    .feedback-modal .modal-topic {
+      font-size: 16px;
+      margin-bottom: 6px;
+    }
+
+    .feedback-subtitle {
+      font-size: 13px;
+      color: #6B7280;
+      margin-bottom: 18px;
+    }
+
+    .feedback-field {
+      margin-bottom: 14px;
+    }
+
+    .feedback-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      border: 1px solid #E5E7EB;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: #111827;
+      resize: vertical;
+      min-height: 72px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .feedback-textarea:focus { border-color: #4F46E5; }
+
+    .feedback-hint {
+      font-size: 11px;
+      color: #9CA3AF;
+      margin-top: 4px;
+    }
+
+    .btn-feedback-submit {
+      width: 100%;
+      padding: 9px 0;
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 4px;
+    }
+
+    .btn-feedback-submit:hover { background: #4338CA; }
+
+    .btn-action {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 5px;
+      cursor: pointer;
+      border: 1.5px solid #4F46E5;
+      background: #4F46E5;
+      color: #fff;
+    }
+
+    .btn-action:hover { background: #4338CA; border-color: #4338CA; }
+
+    /* ── Pagination ── */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      padding: 0 32px 48px;
+    }
+
+    .page-btn {
+      width: 36px;
+      height: 36px;
+      border: 1px solid #D1D5DB;
+      background: #fff;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      color: #374151;
+    }
+
+    .page-btn.active {
+      background: #4F46E5;
+      border-color: #4F46E5;
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .page-btn:hover:not(.active) { border-color: #4F46E5; color: #4F46E5; }
+
+    /* ── Prerequisite Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 18px;
+      cursor: pointer;
+      color: #9CA3AF;
+      border: none;
+      background: none;
+      line-height: 1;
+    }
+
+    .modal-close:hover { color: #374151; }
+
+    .modal-topic {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 14px;
+    }
+
+    .modal-section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+      margin-bottom: 6px;
+    }
+
+    .modal-primer {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #374151;
+    }
+
+    .read-more-btn {
+      margin-top: 12px;
+      font-size: 13px;
+      color: #4F46E5;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+      display: block;
+    }
+
+    .modal-full {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #F3F4F6;
+    }
+
+    .modal-full.open { display: block; }
+
+    .modal-full-text {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #374151;
+    }
+
+    .modal-definition {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #374151;
+      margin-bottom: 14px;
+    }
+
+    .modal-bullet-section {
+      margin-bottom: 10px;
+    }
+
+    .modal-bullet-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #4F46E5;
+      margin-bottom: 4px;
+    }
+
+    .modal-bullet-text {
+      font-size: 14px;
+      line-height: 1.65;
+      color: #374151;
+      padding-left: 12px;
+      border-left: 2px solid #E0E7FF;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; padding: 16px; }
+      .filter-row { padding: 10px 16px; }
+      .filter-row-label { width: 50px; }
+      nav { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-logo">EnggSystemBlogs</div>
+    <div class="nav-user">
+      <div class="avatar">MB</div>
+      <span class="user-name">Mridu Bhatnagar</span>
+      <button class="btn-signout">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Flash message (hidden by default) -->
+  <div class="flash" id="flashMsg">Sorry, we are unable to process your request. Please try again after some time.</div>
+
+  <!-- Filter Strip -->
+  <div class="filter-strip">
+
+    <!-- Row 1: Companies -->
+    <div class="filter-row">
+      <span class="filter-row-label">Company</span>
+      <div class="tag-browser-scroll-wrap">
+        <div class="tag-browser-scroll">
+          <span class="tag-pill active" onclick="toggleCompany(this)">Cloudflare</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">GitHub</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Netflix</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Stripe</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Meta</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">AWS</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Slack</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Airbnb</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Dropbox</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Fly.io</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Discord</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Spotify</span>
+          <span class="tag-pill" onclick="toggleCompany(this)">Google</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Topics -->
+    <div class="filter-row">
+      <span class="filter-row-label">Topic</span>
+      <div class="tag-browser-scroll-wrap">
+        <div class="tag-browser-scroll">
+          <span class="tag-pill" onclick="toggleTag(this)">distributed-systems <span class="tag-pill-count">24</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">caching <span class="tag-pill-count">18</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">kafka <span class="tag-pill-count">12</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">reliability <span class="tag-pill-count">21</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">grpc <span class="tag-pill-count">8</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">machine-learning <span class="tag-pill-count">31</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">observability <span class="tag-pill-count">15</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">networking <span class="tag-pill-count">19</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">kubernetes <span class="tag-pill-count">11</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">database <span class="tag-pill-count">22</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">incident-response <span class="tag-pill-count">9</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">api-design <span class="tag-pill-count">14</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">security <span class="tag-pill-count">17</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">infrastructure <span class="tag-pill-count">28</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">performance <span class="tag-pill-count">16</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">data-engineering <span class="tag-pill-count">13</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">microservices <span class="tag-pill-count">20</span></span>
+          <span class="tag-pill" onclick="toggleTag(this)">ci-cd <span class="tag-pill-count">7</span></span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Card Grid — Row 1 -->
+  <div class="grid">
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://cf-assets.www.cloudflare.com/zkvhlag99gkb/4FY0GdRkMvgoMtb3bcaVPh/3d507c58b227da72b42899bd1d73b591/BLOG-3247_OG.png" alt="thumbnail" />
+        <span class="company-badge">Cloudflare</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">How We Built a Global Anycast Network at Cloudflare</div>
+        <div class="card-prereqs">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('Anycast Routing')">Anycast Routing</span>
+            <span class="prereq-chip" onclick="openModal('BGP')">BGP</span>
+            <span class="prereq-chip" onclick="openModal('DNS Resolution')">DNS Resolution</span>
+          </div>
+        </div>
+        <div class="card-tags">
+          <div class="section-label">Tags</div>
+          <div class="tags-chips">
+            <span class="tag">networking</span>
+            <span class="tag">infrastructure</span>
+            <span class="tag">distributed-systems</span>
+          </div>
+        </div>
+        <div class="card-footer">
+          <button class="btn-flag" onclick="openFeedbackModal()">⚑ Report incorrect tags, prerequisites</button>
+          <div class="card-actions">
+            <button class="btn-action">Summary</button>
+            <button class="btn-action">Simplify</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/8B5CF6/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">GitHub</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Rethinking Open Source Mentorship in the AI Era</div>
+        <div class="card-tags">
+          <div class="section-label">Tags</div>
+          <div class="tags-chips">
+            <span class="tag">open-source</span>
+            <span class="tag">ai</span>
+            <span class="tag">developer-tools</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action">Summary</button>
+          <button class="btn-action">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/EC4899/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Meta</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Ranking Engineer Agent: Autonomous ML Experimentation at Meta</div>
+        <div class="card-prereqs">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('Reinforcement Learning')">Reinforcement Learning</span>
+            <span class="prereq-chip" onclick="openModal('A/B Testing')">A/B Testing</span>
+            <span class="prereq-chip" onclick="openModal('Feature Stores')">Feature Stores</span>
+            <span class="prereq-more">+1 more</span>
+          </div>
+        </div>
+        <div class="card-tags">
+          <div class="section-label">Tags</div>
+          <div class="tags-chips">
+            <span class="tag">machine-learning</span>
+            <span class="tag">ai</span>
+            <span class="tag">automation</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action">Summary</button>
+          <button class="btn-action">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Ad Strip -->
+  <div class="ad-strip">
+    <div class="ad-unit">
+      <div class="ad-body">
+        <div class="ad-headline">Know an engineer who'd love this? 👋</div>
+        <div class="ad-description">EnggSystemBlogs brings engineering blogs from Netflix, Cloudflare, Stripe and more — with AI summaries, search, and simplified explanations. Share it with your team.</div>
+      </div>
+      <a class="ad-cta" href="#">Share</a>
+    </div>
+  </div>
+
+  <!-- Card Grid — Row 2 -->
+  <div class="grid">
+
+    <!-- Limited tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/F59E0B/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Stripe</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Building Reliable Payment Infrastructure at Scale</div>
+        <div class="card-tags">
+          <span class="badge-limited">Limited Content — Not in search results</span>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action" onclick="window.open('#', '_blank')">Full Read ↗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Partial tier card (no Simplify) -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/10B981/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Spotify</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Inside Spotify's Data Platform: Scaling to 600M Users</div>
+        <div class="card-prereqs">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('Apache Spark')">Apache Spark</span>
+            <span class="prereq-chip" onclick="openModal('Data Lake')">Data Lake</span>
+          </div>
+        </div>
+        <div class="card-tags">
+          <div class="section-label">Tags</div>
+          <div class="tags-chips">
+            <span class="tag">data-engineering</span>
+            <span class="tag">platform</span>
+            <span class="tag-more">+2 more</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action">Summary</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full tier card -->
+    <div class="card">
+      <div class="card-thumbnail" onclick="window.open('#', '_blank')">
+        <img src="https://placehold.co/600x340/3B82F6/ffffff?text=Article+Image" alt="thumbnail" />
+        <span class="company-badge">Dropbox</span>
+      </div>
+      <div class="card-body">
+        <div class="card-title">Using DSPy to Optimize Our Relevance Judge Pipeline</div>
+        <div class="card-prereqs">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('DSPy')">DSPy</span>
+            <span class="prereq-chip" onclick="openModal('LLM Evaluation')">LLM Evaluation</span>
+          </div>
+        </div>
+        <div class="card-tags">
+          <div class="section-label">Tags</div>
+          <div class="tags-chips">
+            <span class="tag">llm</span>
+            <span class="tag">machine-learning</span>
+            <span class="tag">search</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="btn-action">Summary</button>
+          <button class="btn-action">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination">
+    <button class="page-btn">←</button>
+    <button class="page-btn active">1</button>
+    <button class="page-btn">2</button>
+    <button class="page-btn">3</button>
+    <button class="page-btn">→</button>
+  </div>
+
+  <!-- Feedback Modal -->
+  <div class="modal-overlay feedback-modal" id="feedbackModal" onclick="handleFeedbackOverlayClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeFeedbackModal()">✕</button>
+      <div class="modal-topic">Flag incorrect tags or prerequisites</div>
+      <div class="feedback-subtitle">Help us improve — let us know what's wrong and suggest better ones.</div>
+      <div class="feedback-field">
+        <label class="feedback-label">Suggested Tags</label>
+        <textarea class="feedback-textarea" placeholder="e.g. networking, anycast, cdn"></textarea>
+        <div class="feedback-hint">Comma-separated. Leave blank if tags are fine.</div>
+      </div>
+      <div class="feedback-field">
+        <label class="feedback-label">Suggested Prerequisites</label>
+        <textarea class="feedback-textarea" placeholder="e.g. BGP, DNS, TCP/IP"></textarea>
+        <div class="feedback-hint">Comma-separated. Leave blank if prerequisites are fine.</div>
+      </div>
+      <button class="btn-feedback-submit" onclick="closeFeedbackModal()">Submit Feedback</button>
+    </div>
+  </div>
+
+  <!-- Prerequisite Modal -->
+  <div class="modal-overlay" id="prereqModal" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-topic" id="modalTopic"></div>
+      <div class="modal-primer" id="modalPrimer"></div>
+      <button class="read-more-btn" id="readMoreBtn" onclick="showFull()">Read more ↓</button>
+      <div class="modal-full" id="modalFull">
+        <div class="modal-full-text" id="modalFullText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function s(definition, why, example, full) {
+      return { definition, why, example, full };
+    }
+
+    const prereqContent = {
+      "Anycast Routing": s(
+        "Anycast is a network addressing method where the same IP address is assigned to multiple servers across different geographic locations. When a request arrives, the internet's routing infrastructure automatically directs it to the nearest server — without the client knowing multiple servers exist.",
+        "It reduces latency by ensuring users are always served from the closest data center. It also improves resilience — if one node goes down, traffic is silently rerouted to the next nearest node with no manual intervention needed.",
+        "When you visit cloudflare.com from Mumbai, your request hits a Cloudflare server in Mumbai — not one in the US — even though the IP address is the same worldwide. That's anycast doing its job.",
+        "In traditional unicast routing, each server has a unique IP. Anycast breaks that assumption: many servers share one IP, and BGP (the internet's routing protocol) handles directing traffic to the topologically closest one. 'Closest' here means fewest BGP hops, not necessarily geographic distance. Cloudflare operates 300+ data centers all advertising the same IP prefixes via anycast — this is why their global network feels fast regardless of where you are. The same mechanism also absorbs DDoS traffic: instead of one server absorbing an attack, the load is spread across every edge node globally."
+      ),
+      "BGP": s(
+        "BGP (Border Gateway Protocol) is the routing protocol that controls how traffic moves between large networks — called autonomous systems (AS) — on the internet. It is the protocol that makes the internet work at a global scale.",
+        "Without BGP, there would be no way for your ISP's network to know how to reach Cloudflare's network, or for Cloudflare's network to reach AWS. BGP is the glue that connects all these independent networks into one internet.",
+        "When you type cloudflare.com, your ISP's router consults its BGP routing table to decide: 'which network should I hand this packet to next, so it reaches Cloudflare?' That decision — repeated at every hop — is BGP in action.",
+        "Each autonomous system (AS) — think: ISPs, cloud providers, CDNs — has an AS number and runs BGP to advertise which IP address ranges it owns and can route to. Routers exchange these advertisements and build routing tables. BGP selects the 'best' path based on attributes like AS path length and local preferences. Cloudflare peers directly with hundreds of ISPs via BGP, which is how it can advertise anycast prefixes globally and ensure traffic always reaches its nearest edge node. BGP misconfigurations are catastrophic — the 2021 Facebook outage happened because Facebook accidentally withdrew all its BGP routes, making its entire infrastructure unreachable worldwide in minutes."
+      ),
+      "DNS Resolution": s(
+        "DNS (Domain Name System) is the internet's phone book. It translates human-readable domain names like cloudflare.com into IP addresses that computers use to actually route traffic.",
+        "Browsers and applications don't know where cloudflare.com lives — they only understand IP addresses. DNS is the step that bridges the two. Without it, you'd have to memorize IPs to visit any website.",
+        "You type cloudflare.com → your browser asks a DNS resolver 'what's the IP for cloudflare.com?' → resolver returns 104.16.132.229 → browser connects to that IP. The whole thing happens in milliseconds.",
+        "DNS resolution is a hierarchy: your browser first checks its local cache, then asks your OS resolver, then a recursive resolver (like 1.1.1.1 or 8.8.8.8). If none have the answer cached, the recursive resolver walks the hierarchy — it asks a root nameserver, which points to the .com TLD nameserver, which points to Cloudflare's authoritative nameserver, which returns the final IP. Results are cached at every layer with a TTL (time to live) to reduce repeat lookups. Cloudflare operates one of the world's largest authoritative DNS networks — fast DNS is critical because it's the very first step before any HTTP connection can be made."
+      ),
+      "Reinforcement Learning": s(
+        "Reinforcement Learning (RL) is a type of machine learning where an agent learns by interacting with an environment. It takes actions, receives a reward signal (positive or negative), and gradually updates its strategy to maximize cumulative reward over time.",
+        "RL is useful when the right answer can't be labeled in advance — instead, you define what 'good' looks like via a reward function, and the agent figures out how to get there through trial and error. This makes it powerful for optimization problems where rules are hard to hand-code.",
+        "Think of training a dog: you don't explain the rules — you reward good behavior and ignore or correct bad behavior. The dog learns what works. RL works the same way: the agent tries things, sees what gets rewarded, and does more of that.",
+        "Unlike supervised learning (where you train on labeled examples), RL learns from delayed, sparse feedback. The agent must explore (try new actions) and exploit (repeat actions that worked). The core algorithm updates a 'policy' — a mapping from states to actions — using reward signals. At Meta, RL is applied to feed ranking: the agent adjusts ranking model parameters, the environment is real user interactions, and the reward is engagement metrics like watch time. The challenge: reward shaping is hard (optimizing the wrong metric causes unintended behavior), and RL systems can be unstable and expensive to train at scale."
+      ),
+      "A/B Testing": s(
+        "A/B testing is a controlled experiment where two variants — A (control) and B (treatment) — are shown to randomly split user segments at the same time. The goal is to measure whether B causes a statistically significant improvement in a target metric.",
+        "It's the gold standard for making product decisions with data rather than intuition. Without A/B testing, you can't tell if a metric change was caused by your feature or by external factors like seasonality or a competitor's outage.",
+        "You change a button color from grey to blue for 50% of users. After a week, you check: did the blue button group click more often? If yes, and the difference is statistically significant, you ship blue to everyone.",
+        "Good A/B tests require: random assignment (to avoid selection bias), sufficient sample size (for statistical power — small samples give noisy results), a single pre-registered primary metric, and guarded secondary metrics to catch regressions. At Meta scale, even a 0.01% change in a core metric is meaningful and detectable. Meta runs thousands of simultaneous experiments using an internal platform that handles traffic splitting, metric collection, and significance testing. The hard problem is experiment interference: when multiple experiments affect the same users, their effects can interact in ways that are hard to untangle."
+      ),
+      "Feature Stores": s(
+        "A feature store is a centralized system for defining, storing, and serving ML features — the inputs to machine learning models. It ensures that the exact same feature values used during model training are also available at inference time.",
+        "Training/serving skew is one of the most common and painful ML bugs: the features computed offline for training differ subtly from what's available in production. Feature stores eliminate this by being the single source of truth for both.",
+        "A model is trained using 'average trip duration for a driver in the last 7 days.' Without a feature store, the training pipeline computes this one way and the serving system computes it another — slight differences cause the model to behave unexpectedly in production. A feature store makes both use the identical computation.",
+        "Feature stores typically have two components: an offline store (backed by a data warehouse like BigQuery or Hive, used for batch training) and an online store (backed by a low-latency key-value store like Redis or Cassandra, used for real-time serving). Teams define features once and share them across models — reducing duplication and making features discoverable. Features are versioned so you can reproduce past model behavior. Meta's internal feature store (part of FBLearner) and Uber's Michelangelo both follow this pattern. The alternative — every team computing their own features independently — leads to inconsistency, redundancy, and hard-to-debug production issues."
+      ),
+      "Apache Spark": s(
+        "Apache Spark is a distributed data processing engine designed for large-scale analytics. It processes data in-memory across a cluster of machines, making it dramatically faster than older batch systems like Hadoop MapReduce for most workloads.",
+        "Modern data platforms deal with terabytes or petabytes of data — far too much for a single machine. Spark lets you process this data in parallel across hundreds of nodes, cutting hours-long jobs to minutes. It's the backbone of most batch ETL pipelines and ML training data preparation at scale.",
+        "Spotify has billions of user listening events per day. A single machine can't process all of that. Spark distributes the work across a cluster — each node processes a chunk of the data in parallel — then combines the results. What would take hours on one machine takes minutes.",
+        "Spark represents computation as a DAG (directed acyclic graph) of transformations on distributed datasets called DataFrames (or the older RDDs). It builds an optimized execution plan, pipelines transformations together, and keeps intermediate data in memory rather than writing to disk between steps — which is why it's so much faster than MapReduce. Spark's unified API covers SQL queries, streaming (Spark Streaming), machine learning (MLlib), and graph processing (GraphX). Spotify uses Spark for batch ETL — transforming raw event logs into clean, structured datasets for analytics dashboards and ML training. The main trade-off: Spark is memory-hungry and requires careful cluster tuning to avoid out-of-memory errors on skewed data."
+      ),
+      "Data Lake": s(
+        "A data lake is a centralized repository that stores raw data in its native format — structured tables, semi-structured JSON/logs, unstructured audio/images — at any scale. Unlike a data warehouse, it imposes no schema at ingestion time.",
+        "Companies generate data in dozens of formats from dozens of systems. A data lake gives you one place to store all of it cheaply, without having to decide upfront how it will be queried or used. This preserves optionality — you can derive new insights from old raw data later.",
+        "Spotify stores raw listening events, audio files, user interaction logs, and backend service logs all in one data lake (backed by object storage like GCS). An analyst who wants a new metric doesn't need new data collection — they write a Spark job that reads the raw logs that already exist.",
+        "The key distinction from a data warehouse is schema-on-read vs schema-on-write. Warehouses require data to be cleaned and structured before it's loaded — fast to query, but inflexible. Data lakes store raw data and apply structure at query time — more flexible, but requires more careful data management. The risk is a 'data swamp': a lake so disorganized that finding and trusting data becomes harder than it's worth. Modern data platforms address this with metadata catalogs (what data exists, where, when), data quality checks, and partitioning strategies. Spotify's data lake is the raw foundation that Spark jobs read from to produce the clean, curated datasets used by ML models and analytics."
+      ),
+      "DSPy": s(
+        "DSPy is a framework for programming language models by defining tasks declaratively — inputs, outputs, and a quality metric — and letting an optimizer automatically find the best prompts and few-shot examples. Instead of hand-writing prompts, you write code.",
+        "Hand-crafted prompts are brittle: small wording changes cause unpredictable output swings, and prompts that work on GPT-4 often fail on a different model. DSPy treats prompt optimization as a search problem — systematic and reproducible — so teams don't have to manually re-tune prompts every time a model changes.",
+        "Instead of writing 'You are a helpful assistant that evaluates search relevance. Given a query and a result, output Relevant or Not Relevant...', you define a DSPy Signature: (query, result) → relevance_label. DSPy then automatically finds a prompt — including few-shot examples — that maximizes accuracy on your evaluation set.",
+        "DSPy introduces 'signatures' (input/output type specs), 'modules' (composable LLM calls), and 'optimizers' (algorithms that search for good prompts). Optimizers like BootstrapFewShot or MIPROv2 generate candidate prompts and few-shot examples, evaluate them against your metric on a dev set, and return the best-performing configuration. The result is a prompt that was found through systematic search rather than intuition. Dropbox used DSPy to optimize their relevance judge — the LLM that scores whether search results match a query. The automatically optimized prompt outperformed the hand-crafted one and was far more stable across model updates. DSPy is especially valuable when you have a clear evaluation metric and want to move fast without prompt engineering becoming a bottleneck."
+      ),
+      "LLM Evaluation": s(
+        "LLM evaluation is the discipline of measuring how well a language model's outputs meet the goals of a task. Because LLM outputs are open-ended text, traditional accuracy metrics don't apply — specialized approaches are needed.",
+        "Without evaluation, you can't tell if a new model or prompt is better or worse than what you had before. Evaluation is what turns LLM development from guesswork into engineering — it gives you a feedback signal to optimize against.",
+        "You're building a search relevance judge. You have 500 (query, result) pairs that humans labeled as Relevant or Not Relevant. You run your LLM judge on all 500 and measure how often it agrees with the human labels. That agreement rate is your evaluation metric.",
+        "Common evaluation approaches sit on a quality/cost spectrum. Reference-based metrics (BLEU, ROUGE) compare outputs to gold-standard answers — cheap and fast, but poorly correlated with human judgment for generation tasks. Human evaluation is high quality but slow and expensive. LLM-as-judge — using a powerful model like GPT-4 to score outputs — is fast, scalable, and surprisingly reliable, but has known biases (preferring longer answers, favoring its own outputs). The hardest part is building a good evaluation set: it needs to cover edge cases, be representative of real usage, and have reliable ground truth labels. Dropbox uses an LLM relevance judge to evaluate their search pipeline, and DSPy to optimize that judge's own prompt — so the judge itself is continuously improved as their evaluation data grows."
+      )
+    };
+
+    function buildPrimer(data) {
+      return `
+        <div class="modal-definition">${data.definition}</div>
+        <div class="modal-bullet-section">
+          <div class="modal-bullet-label">Why it matters</div>
+          <div class="modal-bullet-text">${data.why}</div>
+        </div>
+        <div class="modal-bullet-section">
+          <div class="modal-bullet-label">Example</div>
+          <div class="modal-bullet-text">${data.example}</div>
+        </div>
+      `;
+    }
+
+    function buildFull(data) {
+      return `<div class="modal-bullet-label" style="margin-bottom:8px">Deep dive</div>
+              <div class="modal-bullet-text">${data.full}</div>`;
+    }
+
+    function openModal(topic) {
+      const data = prereqContent[topic];
+      document.getElementById('modalTopic').textContent = topic;
+      document.getElementById('modalPrimer').innerHTML = buildPrimer(data);
+      document.getElementById('modalFullText').innerHTML = buildFull(data);
+      document.getElementById('modalFull').classList.remove('open');
+      document.getElementById('readMoreBtn').style.display = 'block';
+      document.getElementById('prereqModal').classList.add('open');
+    }
+
+    function showFull() {
+      document.getElementById('modalFull').classList.add('open');
+      document.getElementById('readMoreBtn').style.display = 'none';
+    }
+
+    function closeModal() {
+      document.getElementById('prereqModal').classList.remove('open');
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('prereqModal')) closeModal();
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function toggleCompany(el) {
+      const isActive = el.classList.contains('active');
+      el.closest('.filter-row').querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
+      if (!isActive) el.classList.add('active');
+    }
+
+    function toggleTag(el) {
+      const isActive = el.classList.contains('active');
+      el.closest('.filter-row').querySelectorAll('.tag-pill').forEach(p => p.classList.remove('active'));
+      if (!isActive) el.classList.add('active');
+    }
+    function openFeedbackModal() {
+      document.getElementById('feedbackModal').classList.add('open');
+    }
+
+    function closeFeedbackModal() {
+      document.getElementById('feedbackModal').classList.remove('open');
+    }
+
+    function handleFeedbackOverlayClick(e) {
+      if (e.target === document.getElementById('feedbackModal')) closeFeedbackModal();
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,260 @@
+# DB Schema: Engineering Blog Aggregator
+
+## Tables
+
+### user
+| Column | Type |
+|--------|------|
+| user_id | uuid (PK) |
+| google_auth_id | text |
+| name | text |
+| email | text |
+| profile_url | text |
+
+**Reasoning:** `user` and `blog` are independent — `user_id` is not in the blog table because the same blogs are displayed to all users. No per-user content.
+
+---
+
+### allowed_users
+| Column | Type |
+|--------|------|
+| id | uuid (PK) |
+| email | text |
+
+**Reasoning:** Product is not open to all. Only users whose email is in `allowed_users` can access the platform. An email can exist in `allowed_users` without the person being a registered user — so there is no relationship between `allowed_users` and `user`. At login time: Google authentication happens first, then email is checked against `allowed_users`. If not present, the user is rejected.
+
+---
+
+### blog_source
+| Column | Type |
+|--------|------|
+| id | uuid (PK) |
+| source | text |
+| rss_feed_link | text |
+| created_at | timestamp |
+
+**Reasoning:** Company/source information does not belong in the `blog` table — `blog` should only contain blog-level attributes. `blog_source` is a separate table. The relationship is one-to-many: one source can have many blogs, but one blog belongs to exactly one source. The foreign key (`blog_source_id`) lives on the "many" side, i.e., in the `blog` table.
+
+---
+
+### blog
+| Column | Type |
+|--------|------|
+| id | text (guid from RSS, PK) |
+| created_at | timestamp |
+| link | text |
+| title | text |
+| thumbnail | text |
+| word_count | integer |
+| published_at | timestamp |
+| blog_source_id | uuid (FK → blog_source) |
+
+**Reasoning:**
+- `id` is the RSS guid — used for deduplication during polling.
+- `content:encoded` (full article text) is **not stored** — storing full copyrighted blog content raises legal concerns. Content is fetched on-demand when a user first requests a summary or simplify, the LLM result is stored, and the raw content is discarded.
+- `thumbnail`, `word_count`, `title` are individual columns — each is a distinct blog attribute.
+- `published_at` is the original article publish date from RSS (`pubDate`) — shown on summary/simplify pages as part of the attribution line.
+- `blog_source_id` is the FK linking to `blog_source` — placed on the "many" side (blog table).
+
+---
+
+### summary
+| Column | Type |
+|--------|------|
+| id | uuid (PK) |
+| created_at | timestamp |
+| updated_at | timestamp |
+| blog_id | text (FK → blog) |
+| content | jsonb |
+
+**Reasoning:** Summary is a separate table for separation of concern. `created_at` is when the summary was first generated. `updated_at` is updated on every 7-day regeneration — the handler uses this to determine if a refresh is due. `content` stores the full LLM response as `{"short_summary": "...", "key_points": [...]}` — `jsonb` is used over `text` so Postgres validates JSON on insert and pgadmin renders it readably. Fields are always read together, never queried independently.
+
+---
+
+### simplify
+| Column | Type |
+|--------|------|
+| id | uuid (PK) |
+| created_at | timestamp |
+| updated_at | timestamp |
+| blog_id | text (FK → blog) |
+| simplify | text |
+
+**Reasoning:** Same reasoning as `summary`. `updated_at` tracks last regeneration for the 7-day refresh cycle.
+
+---
+
+### prerequisite
+| Column | Type | Constraint |
+|--------|------|------------|
+| id | uuid (PK) | |
+| created_at | timestamp | |
+| updated_at | timestamp | |
+| topic_name | text | UNIQUE |
+| content | jsonb | nullable |
+| embedding | vector(1536) | |
+
+**Reasoning:** One row per prerequisite topic. `topic_name` has a UNIQUE constraint — the same topic cannot have duplicate rows, enabling LLM output to be stored once per topic and shared across all articles that reference it. `content` is nullable — it is populated on first user click (on-demand), not at ingest. At ingest, only `topic_name` and `embedding` are written. `content` stores the full LLM response as `{"definition": "...", "why_it_matters": "...", "example": "...", "deep_dive": "..."}` — `jsonb` is used over `text` so Postgres validates JSON on insert and pgadmin renders it readably. `updated_at` tracks last regeneration for the configurable refresh cycle (default 7 days). `embedding` stores the topic name's vector representation — used at ingest time to find similar existing prerequisites via cosine similarity (threshold: 0.95) before inserting a new row.
+
+---
+
+### blog_prerequisite
+| Column | Type | Constraint |
+|--------|------|------------|
+| blog_id | text (FK → blog) | PK |
+| prerequisite_id | uuid (FK → prerequisite) | PK |
+| created_at | timestamp | |
+
+**Reasoning:** Blog and prerequisite have a many-to-many relationship — one blog can have many prerequisites, one prerequisite can belong to many blogs. Many-to-many requires a junction/intermediate table. Composite PK on `(blog_id, prerequisite_id)` enforces that the same prerequisite cannot be linked to the same blog twice.
+
+---
+
+### tag
+| Column | Type | Constraint |
+|--------|------|------------|
+| tag_id | uuid (PK) | |
+| created_at | timestamp | |
+| tag | text | UNIQUE |
+| embedding | vector(1536) | |
+
+**Reasoning:** One row per tag — `tag` column stores a single tag value (e.g., `"kafka"`, `"scaling"`). Storing multiple tags in one column would violate 1NF (values must be atomic). Unique constraint on `tag` enforces at the DB level that the same tag cannot have duplicate rows — normalization before insert handles this in practice, but the constraint is the safety net. `embedding` stores the tag's vector representation — used at ingest time to find similar existing tags via cosine similarity (threshold: 0.95) before inserting a new row.
+
+---
+
+### blog_tag
+| Column | Type | Constraint |
+|--------|------|------------|
+| blog_id | text (FK → blog) | PK |
+| tag_id | uuid (FK → tag) | PK |
+| created_at | timestamp | |
+
+**Reasoning:** Blog and tag have a many-to-many relationship — one blog can have many tags, one tag can belong to many blogs. Many-to-many requires a junction/intermediate table. Composite PK on `(blog_id, tag_id)` enforces that the same tag cannot be linked to the same blog twice.
+
+---
+
+### blog_chunk
+| Column | Type |
+|--------|------|
+| id | uuid (PK) |
+| blog_id | text (FK → blog) |
+| chunk_text | text |
+| embedding | vector(1536) |
+| created_at | timestamp |
+
+**Reasoning:** Chunk-level embeddings stored separately from the blog row. A single embedding per article (e.g., of the ingest summary) would miss specific concepts buried in long articles — chunk-level gives more precise semantic search recall. `chunk_text` is stored alongside the embedding for debugging and mapping purposes. Limited tier articles (< 150 words) are excluded and never reach the chunker/embedder. `blog_id` is the FK linking back to the article the chunk belongs to.
+
+---
+
+## ER Diagram
+
+```mermaid
+erDiagram
+    blog_source {
+        id uuid PK
+        source text
+        rss_feed_link text
+        created_at timestamp
+    }
+
+    blog {
+        id text PK
+        blog_source_id uuid FK
+        created_at timestamp
+        link text
+        title text
+        thumbnail text
+        word_count int
+        published_at timestamp
+    }
+
+    blog_chunk {
+        id uuid PK
+        blog_id text FK
+        chunk_text text
+        embedding vector
+        created_at timestamp
+    }
+
+    summary {
+        id uuid PK
+        blog_id text FK
+        created_at timestamp
+        updated_at timestamp
+        content jsonb
+    }
+
+    simplify {
+        id uuid PK
+        blog_id text FK
+        created_at timestamp
+        updated_at timestamp
+        simplify text
+    }
+
+    prerequisite {
+        id uuid PK
+        created_at timestamp
+        updated_at timestamp
+        topic_name text
+        content jsonb
+        embedding vector
+    }
+
+    blog_prerequisite {
+        blog_id text PK
+        prerequisite_id uuid PK
+        created_at timestamp
+    }
+
+    tag {
+        tag_id uuid PK
+        created_at timestamp
+        tag text
+        embedding vector
+    }
+
+    blog_tag {
+        blog_id text PK
+        tag_id uuid PK
+        created_at timestamp
+    }
+
+    user {
+        user_id uuid PK
+        google_auth_id text
+        name text
+        email text
+        profile_url text
+    }
+
+    allowed_users {
+        id uuid PK
+        email text
+    }
+
+    blog_source ||--o{ blog : "has"
+    blog ||--o{ blog_chunk : "has"
+    blog ||--o| summary : "has"
+    blog ||--o| simplify : "has"
+    blog ||--o{ blog_prerequisite : "has"
+    prerequisite ||--o{ blog_prerequisite : "has"
+    blog ||--o{ blog_tag : "has"
+    tag ||--o{ blog_tag : "has"
+```
+
+---
+
+## Relationships Summary
+
+| Relationship | Type |
+|---|---|
+| blog → blog_source | Many-to-one |
+| blog → summary | One-to-one |
+| blog → simplify | One-to-one |
+| blog ↔ prerequisite | Many-to-many (via blog_prerequisite) |
+| blog → blog_prerequisite | One-to-many |
+| prerequisite → blog_prerequisite | One-to-many |
+| blog ↔ tag | Many-to-many (via blog_tag) |
+| blog → blog_tag | One-to-many |
+| tag → blog_tag | One-to-many |
+| blog → blog_chunk | One-to-many |

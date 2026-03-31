@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Card Mockup — Prerequisites</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f3f4f6;
+      padding: 48px 24px;
+      color: #111827;
+    }
+
+    h2 {
+      font-size: 14px;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 24px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1100px;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    /* ── Thumbnail ── */
+    .thumbnail {
+      position: relative;
+      height: 180px;
+      background: #e5e7eb;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .company-badge {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      background: #4F46E5;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    /* ── Card body ── */
+    .card-body {
+      padding: 14px 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    /* ── Title ── */
+    .title {
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #111827;
+      cursor: pointer;
+    }
+
+    .title:hover { color: #4F46E5; }
+
+    /* ── Section label ── */
+    .section-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 4px;
+    }
+
+    /* ── Prerequisites ── */
+    .prereq-section { display: flex; flex-direction: column; }
+
+    .prereq-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .prereq-chip {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid #4F46E5;
+      color: #4F46E5;
+      background: #eef2ff;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .prereq-chip:hover {
+      background: #4F46E5;
+      color: #fff;
+    }
+
+    /* ── Tags ── */
+    .tags-section { display: flex; flex-direction: column; }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 11px;
+      padding: 3px 9px;
+      border-radius: 4px;
+      background: #1f2937;
+      color: #fff;
+      font-weight: 500;
+    }
+
+    .tag-more {
+      font-size: 11px;
+      color: #6b7280;
+      padding: 3px 4px;
+    }
+
+    /* ── Buttons ── */
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 4px;
+    }
+
+    .btn {
+      flex: 1;
+      padding: 7px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      text-align: center;
+    }
+
+    .btn-summary {
+      background: #4F46E5;
+      color: #fff;
+    }
+
+    .btn-simplify {
+      background: #f3f4f6;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+    }
+
+    /* ── New tab indicator ── */
+    .new-tab-hint {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      font-size: 12px;
+      color: #9ca3af;
+    }
+
+    /* ── Modal overlay ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      padding: 28px 32px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 20px;
+      cursor: pointer;
+      color: #9ca3af;
+      border: none;
+      background: none;
+    }
+
+    .modal-topic {
+      font-size: 18px;
+      font-weight: 700;
+      color: #111827;
+      margin-bottom: 16px;
+    }
+
+    .modal-primer-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .modal-primer {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #374151;
+      margin-bottom: 16px;
+    }
+
+    .read-more-btn {
+      font-size: 13px;
+      color: #4F46E5;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      padding: 0;
+    }
+
+    .modal-full {
+      display: none;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .modal-full.open { display: block; }
+
+    .modal-full-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+
+    .modal-full-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #374151;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Card mockup — prerequisites above tags (signed-in user, Full tier)</h2>
+
+  <div class="grid">
+
+    <!-- Card 1: Full tier — prereqs + tags + both buttons -->
+    <div class="card">
+      <div class="thumbnail">
+        <img src="https://picsum.photos/seed/netflix/400/200" alt="thumbnail" />
+        <span class="company-badge">Netflix</span>
+      </div>
+      <span class="new-tab-hint">↗</span>
+      <div class="card-body">
+        <div class="title">How Netflix Handles 200M Concurrent Streams Without Breaking a Sweat</div>
+
+        <div class="prereq-section">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('CDN & Edge Caching')">CDN & Edge Caching</span>
+            <span class="prereq-chip" onclick="openModal('Load Balancing')">Load Balancing</span>
+            <span class="prereq-chip" onclick="openModal('Adaptive Bitrate')">Adaptive Bitrate</span>
+          </div>
+        </div>
+
+        <div class="tags-section">
+          <div class="section-label">Tags</div>
+          <div class="tags">
+            <span class="tag">distributed systems</span>
+            <span class="tag">streaming</span>
+            <span class="tag">scaling</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-summary">Summary</button>
+          <button class="btn btn-simplify">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Many prereqs — truncated with +N more -->
+    <div class="card">
+      <div class="thumbnail">
+        <img src="https://picsum.photos/seed/uber/400/200" alt="thumbnail" />
+        <span class="company-badge">Uber</span>
+      </div>
+      <span class="new-tab-hint">↗</span>
+      <div class="card-body">
+        <div class="title">Uber's Real-Time Data Pipeline: From Trip Events to ML Features in Milliseconds</div>
+
+        <div class="prereq-section">
+          <div class="section-label">Prerequisites</div>
+          <div class="prereq-chips">
+            <span class="prereq-chip" onclick="openModal('Apache Kafka')">Apache Kafka</span>
+            <span class="prereq-chip" onclick="openModal('Stream Processing')">Stream Processing</span>
+            <span class="prereq-chip" onclick="openModal('Feature Stores')">Feature Stores</span>
+            <span class="tag-more">+2 more</span>
+          </div>
+        </div>
+
+        <div class="tags-section">
+          <div class="section-label">Tags</div>
+          <div class="tags">
+            <span class="tag">kafka</span>
+            <span class="tag">ml</span>
+            <span class="tag">real-time</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-summary">Summary</button>
+          <button class="btn btn-simplify">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: No prereqs extracted -->
+    <div class="card">
+      <div class="thumbnail">
+        <img src="https://picsum.photos/seed/stripe/400/200" alt="thumbnail" />
+        <span class="company-badge">Stripe</span>
+      </div>
+      <span class="new-tab-hint">↗</span>
+      <div class="card-body">
+        <div class="title">How We Built Stripe's Idempotency Layer to Survive Any Failure</div>
+
+        <div class="tags-section">
+          <div class="section-label">Tags</div>
+          <div class="tags">
+            <span class="tag">payments</span>
+            <span class="tag">reliability</span>
+            <span class="tag">api design</span>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button class="btn btn-summary">Summary</button>
+          <button class="btn btn-simplify">Simplify</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-topic" id="modal-topic"></div>
+      <div class="modal-primer-label">Primer</div>
+      <div class="modal-primer" id="modal-primer"></div>
+      <button class="read-more-btn" id="read-more-btn" onclick="showFull()">Read more ↓</button>
+      <div class="modal-full" id="modal-full">
+        <div class="modal-full-label">Full Explanation</div>
+        <div class="modal-full-text" id="modal-full-text"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const content = {
+      "CDN & Edge Caching": {
+        primer: "A CDN (Content Delivery Network) is a network of servers distributed globally that cache and serve content close to users. This reduces latency by avoiding long round trips to the origin server.",
+        full: "When a user requests a video, the CDN checks if a nearby edge node has a cached copy. If yes, it serves it immediately (cache hit). If not, it fetches from origin, caches it locally, and serves the user. Netflix uses this extensively — popular content is pre-positioned on edge nodes before users even request it, a technique called proactive caching. Edge nodes also handle TLS termination and route optimization, further reducing load on origin infrastructure."
+      },
+      "Load Balancing": {
+        primer: "Load balancing distributes incoming traffic across multiple servers so no single server becomes a bottleneck. It improves reliability and throughput.",
+        full: "Load balancers can work at Layer 4 (TCP/IP level) or Layer 7 (HTTP level). Layer 7 load balancers can make smarter routing decisions — e.g., routing video requests to servers with warm caches for that content. Netflix uses a combination of DNS-based load balancing and software load balancers like Zuul (their API gateway) to distribute traffic. They also use client-side load balancing with Ribbon, where the client itself picks from a list of healthy instances."
+      },
+      "Adaptive Bitrate": {
+        primer: "Adaptive Bitrate Streaming (ABR) adjusts video quality in real-time based on the viewer's available bandwidth. This prevents buffering on slow connections.",
+        full: "The video is encoded at multiple quality levels (e.g., 240p, 480p, 1080p, 4K). The client monitors download speed and buffer health, then requests the appropriate quality chunk for the next segment. Netflix's ABR algorithm (BOLA) uses buffer occupancy as its signal rather than raw bandwidth, which makes it more stable under fluctuating network conditions. The result: seamless playback even as your network speeds up or slows down."
+      },
+      "Apache Kafka": {
+        primer: "Kafka is a distributed event streaming platform. Producers publish messages to topics; consumers read from them. It handles millions of events per second with high durability.",
+        full: "Kafka stores messages in an immutable, append-only log partitioned across brokers. Each partition is replicated for fault tolerance. Consumers track their position (offset) independently, allowing multiple consumer groups to process the same stream at different rates. Uber uses Kafka as the backbone of their real-time data platform — every trip event, driver location update, and fare calculation flows through it before being consumed by downstream ML pipelines, analytics systems, and operational dashboards."
+      },
+      "Stream Processing": {
+        primer: "Stream processing analyzes and transforms data in real-time as it arrives, rather than in batch after the fact. Results are available within milliseconds to seconds.",
+        full: "Unlike batch processing (which waits for a full dataset), stream processing frameworks like Apache Flink or Spark Streaming process each event as it arrives. They support operations like windowed aggregations (e.g., 'count trips in the last 5 minutes'), joins across streams, and stateful computations. Uber uses Flink to compute real-time features — things like driver availability in a city zone, demand surges, or ETA accuracy metrics — that feed directly into their ML models for dynamic pricing and dispatch."
+      },
+      "Feature Stores": {
+        primer: "A feature store is a centralized system for storing and serving ML features. It ensures the same features used in training are available in real-time during model serving.",
+        full: "Training/serving skew is a common ML problem: the features used to train a model differ from what's available at serving time. Feature stores solve this by providing a single source of truth. They typically have an offline store (for training, backed by a data warehouse) and an online store (for low-latency serving, backed by Redis or Cassandra). Uber's Michelangelo platform includes a feature store that lets teams define, share, and reuse features — so the 'average trip duration for a driver in the last 7 days' computed for training is identical to the value served at prediction time."
+      }
+    };
+
+    function openModal(topic) {
+      document.getElementById('modal-topic').textContent = topic;
+      document.getElementById('modal-primer').textContent = content[topic]?.primer || '';
+      document.getElementById('modal-full-text').textContent = content[topic]?.full || '';
+      document.getElementById('modal-full').classList.remove('open');
+      document.getElementById('read-more-btn').style.display = 'inline';
+      document.getElementById('modal').classList.add('open');
+    }
+
+    function showFull() {
+      document.getElementById('modal-full').classList.add('open');
+      document.getElementById('read-more-btn').style.display = 'none';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').classList.remove('open');
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('modal')) closeModal();
+    }
+  </script>
+
+</body>
+</html>

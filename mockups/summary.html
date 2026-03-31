@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Summary — EnggSystemBlogs</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F9FAFB;
+      color: #111827;
+    }
+
+    /* ── Navbar ── */
+    nav {
+      background: #fff;
+      border-bottom: 1px solid #E5E7EB;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-size: 18px;
+      font-weight: 700;
+      color: #4F46E5;
+      letter-spacing: -0.5px;
+    }
+
+    .nav-user {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #4F46E5;
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .btn-signout {
+      background: none;
+      border: 1px solid #D1D5DB;
+      color: #6B7280;
+      padding: 6px 14px;
+      font-size: 13px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .btn-signout:hover { border-color: #9CA3AF; color: #374151; }
+
+    /* ── Flash message ── */
+    .flash {
+      background: #FEF2F2;
+      border-bottom: 1px solid #FECACA;
+      color: #B91C1C;
+      text-align: center;
+      padding: 10px 32px;
+      font-size: 14px;
+      display: none;
+    }
+
+    /* ── Page Content ── */
+    .page {
+      max-width: 760px;
+      margin: 40px auto;
+      padding: 0 24px 80px;
+    }
+
+    /* ── Thumbnail ── */
+    .thumbnail {
+      width: 100%;
+      aspect-ratio: 16/9;
+      object-fit: cover;
+      border-radius: 10px;
+      display: block;
+      margin-bottom: 28px;
+    }
+
+    /* ── Attribution ── */
+    .attribution {
+      font-size: 13px;
+      color: #6B7280;
+      background: #F3F4F6;
+      border-left: 3px solid #4F46E5;
+      padding: 10px 14px;
+      border-radius: 0 6px 6px 0;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .attribution strong { color: #374151; }
+
+    /* ── Title ── */
+    .article-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #111827;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    /* ── Published date ── */
+    .published-date {
+      font-size: 13px;
+      color: #9CA3AF;
+      margin-bottom: 14px;
+    }
+
+    /* ── Prerequisites ── */
+    .prereqs {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .prereq-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+    }
+
+    .prereq-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .prereq-chip {
+      font-size: 12px;
+      padding: 3px 10px;
+      border-radius: 3px;
+      border: 1px solid #4F46E5;
+      color: #4F46E5;
+      background: #EEF2FF;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .prereq-chip:hover { background: #4F46E5; color: #fff; }
+
+    /* ── Tags ── */
+    .tags-section {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      margin-bottom: 32px;
+    }
+
+    .tags-label {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+    }
+
+    .tags {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .tag {
+      display: inline-block;
+      background: #1E1B4B;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 3px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .tag:hover { background: #4F46E5; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid #E5E7EB;
+      margin-bottom: 28px;
+    }
+
+    /* ── Summary Content ── */
+    .content-body {
+      font-size: 16px;
+      line-height: 1.75;
+      color: #374151;
+    }
+
+    .content-body p + p { margin-top: 16px; }
+
+    /* ── Prerequisite Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      font-size: 18px;
+      cursor: pointer;
+      color: #9CA3AF;
+      border: none;
+      background: none;
+    }
+
+    .modal-close:hover { color: #374151; }
+    .modal-topic { font-size: 18px; font-weight: 700; color: #111827; margin-bottom: 14px; }
+    .modal-definition { font-size: 14px; line-height: 1.65; color: #374151; margin-bottom: 14px; }
+    .modal-bullet-section { margin-bottom: 10px; }
+    .modal-bullet-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #4F46E5; margin-bottom: 4px; }
+    .modal-bullet-text { font-size: 14px; line-height: 1.65; color: #374151; padding-left: 12px; border-left: 2px solid #E0E7FF; }
+    .read-more-btn { margin-top: 12px; font-size: 13px; color: #4F46E5; background: none; border: none; cursor: pointer; font-weight: 600; padding: 0; display: block; }
+    .modal-full { display: none; margin-top: 16px; padding-top: 16px; border-top: 1px solid #F3F4F6; }
+    .modal-full.open { display: block; }
+    .modal-full-text { font-size: 14px; line-height: 1.65; color: #374151; }
+
+    /* ── Ad Unit ── */
+    .ad-unit {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 40px;
+      position: relative;
+    }
+
+    .ad-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+      background: #F3F4F6;
+    }
+
+    .ad-body { flex: 1; }
+
+    .ad-headline {
+      font-size: 14px;
+      font-weight: 600;
+      color: #111827;
+      margin-bottom: 3px;
+    }
+
+    .ad-description {
+      font-size: 13px;
+      color: #6B7280;
+      line-height: 1.4;
+    }
+
+    .ad-cta {
+      font-size: 13px;
+      font-weight: 600;
+      color: #4F46E5;
+      border: 1.5px solid #4F46E5;
+      padding: 7px 16px;
+      border-radius: 6px;
+      white-space: nowrap;
+      cursor: pointer;
+      background: none;
+      text-decoration: none;
+    }
+
+    .ad-cta:hover { background: #EEF2FF; }
+
+    .ad-label {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: #9CA3AF;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    /* ── Bottom Buttons ── */
+    .bottom-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #E5E7EB;
+    }
+
+    .btn-back {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1.5px solid #4F46E5;
+      background: #4F46E5;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-back:hover { background: #4338CA; border-color: #4338CA; }
+
+    .btn-primary {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 700;
+      border: 1.5px solid #4F46E5;
+      background: #4F46E5;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover { background: #4338CA; border-color: #4338CA; }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav>
+    <div class="nav-logo">EnggSystemBlogs</div>
+    <div class="nav-user">
+      <div class="avatar">MB</div>
+      <span class="user-name">Mridu Bhatnagar</span>
+      <button class="btn-signout">Sign Out</button>
+    </div>
+  </nav>
+
+  <!-- Flash message (hidden by default) -->
+  <div class="flash" id="flashMsg">Sorry, we are unable to process your request. Please try again after some time.</div>
+
+  <!-- Page Content -->
+  <div class="page">
+
+    <!-- Thumbnail -->
+    <img class="thumbnail"
+      src="https://cf-assets.www.cloudflare.com/zkvhlag99gkb/4FY0GdRkMvgoMtb3bcaVPh/3d507c58b227da72b42899bd1d73b591/BLOG-3247_OG.png"
+      alt="Article thumbnail" />
+
+    <!-- Attribution -->
+    <div class="attribution">
+      Original blog is by <strong>Cloudflare</strong>. You are seeing an AI generated summary of the original blog.
+    </div>
+
+    <!-- Title -->
+    <div class="article-title">Workers AI Now Runs Large Models: Powering the Next Generation of AI Agents</div>
+
+    <!-- Published date -->
+    <div class="published-date">Published on March 19, 2026</div>
+
+    <!-- Prerequisites -->
+    <div class="prereqs">
+      <div class="prereq-label">Prerequisites</div>
+      <div class="prereq-chips">
+        <span class="prereq-chip" onclick="openModal('Anycast Routing')">Anycast Routing</span>
+        <span class="prereq-chip" onclick="openModal('BGP')">BGP</span>
+        <span class="prereq-chip" onclick="openModal('DNS Resolution')">DNS Resolution</span>
+      </div>
+    </div>
+
+    <!-- Tags -->
+    <div class="tags-section">
+      <div class="tags-label">Tags</div>
+      <div class="tags">
+        <a class="tag" href="/?tag=ai">ai</a>
+        <a class="tag" href="/?tag=infrastructure">infrastructure</a>
+        <a class="tag" href="/?tag=machine-learning">machine-learning</a>
+        <a class="tag" href="/?tag=distributed-systems">distributed-systems</a>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Summary Content -->
+    <div class="content-body">
+      <p>Cloudflare has announced that Workers AI now supports large language models, enabling developers to run powerful AI models directly on Cloudflare's global network. This update significantly expands the capabilities available to developers building AI-powered applications and agents at the edge.</p>
+      <p>The key innovation is Cloudflare's optimized inference stack, which reduces the cost and latency of running large models by distributing inference workloads across their global infrastructure. This means developers can now build sophisticated AI agents that operate closer to end users, without the overhead of managing their own GPU infrastructure.</p>
+      <p>The announcement includes support for Kimi K2.5 and other frontier models, with Cloudflare positioning Workers AI as the ideal platform for running autonomous agents that require fast, reliable, and cost-effective model inference at scale.</p>
+    </div>
+
+    <!-- Ad Unit -->
+    <div class="ad-unit">
+      <div class="ad-body">
+        <div class="ad-headline">Found this summary useful?</div>
+        <div class="ad-description">Share EnggSystemBlogs with a fellow engineer. They get AI summaries, simplified explanations, and smart search across engineering blogs from the best tech companies.</div>
+      </div>
+      <a class="ad-cta" href="#">Share</a>
+    </div>
+
+    <!-- Bottom Buttons -->
+    <div class="bottom-actions">
+      <a class="btn-back" href="/">← Back</a>
+      <a class="btn-primary" href="https://blog.cloudflare.com/workers-ai-large-models/" target="_blank">Read Original ↗</a>
+      <a class="btn-primary" href="/simplify">Simplify →</a>
+    </div>
+
+  </div>
+
+  <!-- Prerequisite Modal -->
+  <div class="modal-overlay" id="prereqModal" onclick="handleOverlayClick(event)">
+    <div class="modal">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div class="modal-topic" id="modalTopic"></div>
+      <div class="modal-primer" id="modalPrimer"></div>
+      <button class="read-more-btn" id="readMoreBtn" onclick="showFull()">Read more ↓</button>
+      <div class="modal-full" id="modalFull">
+        <div class="modal-full-text" id="modalFullText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function s(definition, why, example, full) { return { definition, why, example, full }; }
+
+    const prereqContent = {
+      "Anycast Routing": s(
+        "Anycast is a network addressing method where the same IP address is assigned to multiple servers across different geographic locations. When a request arrives, the internet's routing infrastructure automatically directs it to the nearest server — without the client knowing multiple servers exist.",
+        "It reduces latency by ensuring users are always served from the closest data center. It also improves resilience — if one node goes down, traffic is silently rerouted to the next nearest node with no manual intervention needed.",
+        "When you visit cloudflare.com from Mumbai, your request hits a Cloudflare server in Mumbai — not one in the US — even though the IP address is the same worldwide. That's anycast doing its job.",
+        "In traditional unicast routing, each server has a unique IP. Anycast breaks that assumption: many servers share one IP, and BGP (the internet's routing protocol) handles directing traffic to the topologically closest one. Cloudflare operates 300+ data centers all advertising the same IP prefixes via anycast — this is why their global network feels fast regardless of where you are. The same mechanism also absorbs DDoS traffic: instead of one server absorbing an attack, the load is spread across every edge node globally."
+      ),
+      "BGP": s(
+        "BGP (Border Gateway Protocol) is the routing protocol that controls how traffic moves between large networks — called autonomous systems (AS) — on the internet. It is the protocol that makes the internet work at a global scale.",
+        "Without BGP, there would be no way for your ISP's network to know how to reach Cloudflare's network, or for Cloudflare's network to reach AWS. BGP is the glue that connects all these independent networks into one internet.",
+        "When you type cloudflare.com, your ISP's router consults its BGP routing table to decide: 'which network should I hand this packet to next, so it reaches Cloudflare?' That decision — repeated at every hop — is BGP in action.",
+        "Each autonomous system (AS) has an AS number and runs BGP to advertise which IP address ranges it owns and can route to. Routers exchange these advertisements and build routing tables. BGP selects the best path based on attributes like AS path length and local preferences. Cloudflare peers directly with hundreds of ISPs via BGP — this is how it advertises anycast prefixes globally and ensures traffic always reaches its nearest edge node. BGP misconfigurations are catastrophic: the 2021 Facebook outage happened because Facebook accidentally withdrew all its BGP routes, making its entire infrastructure unreachable worldwide in minutes."
+      ),
+      "DNS Resolution": s(
+        "DNS (Domain Name System) is the internet's phone book. It translates human-readable domain names like cloudflare.com into IP addresses that computers use to actually route traffic.",
+        "Browsers and applications don't know where cloudflare.com lives — they only understand IP addresses. DNS is the step that bridges the two. Without it, you'd have to memorize IPs to visit any website.",
+        "You type cloudflare.com → your browser asks a DNS resolver 'what's the IP for cloudflare.com?' → resolver returns 104.16.132.229 → browser connects to that IP. The whole thing happens in milliseconds.",
+        "DNS resolution is a hierarchy: your browser first checks its local cache, then asks your OS resolver, then a recursive resolver (like 1.1.1.1 or 8.8.8.8). If none have the answer cached, the recursive resolver walks the hierarchy — root nameserver → .com TLD nameserver → Cloudflare's authoritative nameserver → final IP. Results are cached at every layer with a TTL to reduce repeat lookups. Cloudflare operates one of the world's largest authoritative DNS networks — fast DNS is critical because it's the very first step before any HTTP connection can be made."
+      )
+    };
+
+    function buildPrimer(data) {
+      return `<div class="modal-definition">${data.definition}</div>
+        <div class="modal-bullet-section"><div class="modal-bullet-label">Why it matters</div><div class="modal-bullet-text">${data.why}</div></div>
+        <div class="modal-bullet-section"><div class="modal-bullet-label">Example</div><div class="modal-bullet-text">${data.example}</div></div>`;
+    }
+
+    function buildFull(data) {
+      return `<div class="modal-bullet-label" style="margin-bottom:8px">Deep dive</div><div class="modal-bullet-text">${data.full}</div>`;
+    }
+
+    function openModal(topic) {
+      const data = prereqContent[topic];
+      document.getElementById('modalTopic').textContent = topic;
+      document.getElementById('modalPrimer').innerHTML = buildPrimer(data);
+      document.getElementById('modalFullText').innerHTML = buildFull(data);
+      document.getElementById('modalFull').classList.remove('open');
+      document.getElementById('readMoreBtn').style.display = 'block';
+      document.getElementById('prereqModal').classList.add('open');
+    }
+
+    function showFull() {
+      document.getElementById('modalFull').classList.add('open');
+      document.getElementById('readMoreBtn').style.display = 'none';
+    }
+
+    function closeModal() { document.getElementById('prereqModal').classList.remove('open'); }
+    function handleOverlayClick(e) { if (e.target === document.getElementById('prereqModal')) closeModal(); }
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  </script>
+
+</body>
+</html>

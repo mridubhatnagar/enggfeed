@@ -1,0 +1,14 @@
+docker-compose.override.yml
+.env
+.env.local
+.env.prod
+.env.*
+eval/.env
+eval/phase1_results.json
+eval/phase2_similarity.json
+eval/phase1_labeled_export.json
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+alembic/versions/*.pyc

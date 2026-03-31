@@ -1,0 +1,3 @@
+Classify the tag as ok or too_broad or irrelevant:
+{{input}}
+Output should only be one word. Don't output anything else.

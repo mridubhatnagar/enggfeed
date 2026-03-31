@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; echo \"$f\" | grep -q '\\.env' && echo '{\"decision\": \"block\", \"reason\": \".env files cannot be read\"}' || true; }"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read -r f; echo \"$f\" | grep -q '\\.py$' && black \"$f\"; } 2>/dev/null || true",
+            "statusMessage": "Running black..."
+          }
+        ]
+      }
+    ]
+  }
+}

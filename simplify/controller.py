@@ -1,0 +1,91 @@
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy.orm import Session
+
+from blog.dao import BlogDAO, BlogSourceDAO
+from blog.service import BlogService, BlogSourceService
+from database import get_db
+from exceptions import DatabaseError, ForbiddenError, LLMUnreachableError, NotFoundError, RSSFeedError, UnauthorizedError
+from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
+from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
+from rss_client import RSSClient
+from schemas import APIResponse, ErrorDetail
+from simplify.dao import SimplifyDAO
+from simplify.handler import SimplifyHandler
+from simplify.service import SimplifyService
+from tags.dao import BlogTagDAO, TagDAO
+from tags.service import BlogTagService, TagService
+
+router = APIRouter()
+
+
+def get_simplify_handler(db: Session = Depends(get_db)) -> SimplifyHandler:
+    blog_dao = BlogDAO(db)
+    blog_source_dao = BlogSourceDAO(db)
+    simplify_dao = SimplifyDAO(db)
+    tag_dao = TagDAO(db)
+    blog_tag_dao = BlogTagDAO(db)
+    prerequisite_dao = PrerequisiteDAO(db)
+    blog_prerequisite_dao = BlogPrerequisiteDAO(db)
+
+    return SimplifyHandler(
+        blog_service=BlogService(blog_dao),
+        blog_source_service=BlogSourceService(blog_source_dao),
+        simplify_service=SimplifyService(simplify_dao),
+        blog_tag_service=BlogTagService(blog_tag_dao),
+        tag_service=TagService(tag_dao),
+        blog_prerequisite_service=BlogPrerequisiteService(blog_prerequisite_dao),
+        prerequisite_service=PrerequisiteService(prerequisite_dao),
+        rss_client=RSSClient(),
+    )
+
+
+@router.get("/api/v1/blogs/{blog_id}/simplify")
+async def get_simplify(
+    blog_id: str,
+    request: Request,
+    handler: SimplifyHandler = Depends(get_simplify_handler),
+):
+    try:
+        return handler.get_simplify(blog_id=blog_id, request=request)
+    except UnauthorizedError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=401, message=str(exc)),
+        )
+    except ForbiddenError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=403, message=str(exc)),
+        )
+    except NotFoundError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=404, message=str(exc)),
+        )
+    except RSSFeedError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=502, message=str(exc)),
+        )
+    except LLMUnreachableError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=502, message=str(exc)),
+        )
+    except DatabaseError as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=500, message=str(exc)),
+        )
+    except Exception as exc:
+        return APIResponse(
+            success=False,
+            data=None,
+            error=ErrorDetail(code=500, message=str(exc)),
+        )
