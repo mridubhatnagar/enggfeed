@@ -159,7 +159,7 @@ erDiagram
 
     summary {
         id uuid PK
-        blog_id text FK
+        blog_id uuid FK
         created_at timestamp
         updated_at timestamp
         content jsonb
@@ -167,7 +167,7 @@ erDiagram
 
     simplify {
         id uuid PK
-        blog_id text FK
+        blog_id uuid FK
         created_at timestamp
         updated_at timestamp
         simplify text
@@ -183,7 +183,7 @@ erDiagram
     }
 
     blog_prerequisite {
-        blog_id text PK
+        blog_id uuid PK
         prerequisite_id uuid PK
         created_at timestamp
     }
@@ -196,7 +196,7 @@ erDiagram
     }
 
     blog_tag {
-        blog_id text PK
+        blog_id uuid PK
         tag_id uuid PK
         created_at timestamp
     }

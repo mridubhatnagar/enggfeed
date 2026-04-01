@@ -208,14 +208,14 @@ Two methods used across ingest and on-demand handlers:
 - Generated at ingest time via LLM
 - Stable once set — not regenerated on a schedule
 - Stability is intentional: tag-based URLs (e.g., `/?tag=databases`) should remain consistent for users
-- **Normalization pipeline:** string normalize (lowercase, strip, collapse hyphens/underscores/spaces to `-`) → embed via `Embedder.embed()` → cosine similarity check against existing tags in DB (threshold: 0.95) → use existing `tag_id` or insert new tag
+- **Normalization pipeline:** string normalize (lowercase, strip, collapse hyphens/underscores/spaces to `-`) → embed via `Embedder.embed()` → cosine similarity check against existing tags in DB (threshold: 0.88) → use existing `tag_id` or insert new tag
 - **Embedding timing:** embedding is computed inline at ingest and stored in the same insert as the tag name — there is no separate embedding step. `create_tag(name, embedding)` writes both together.
 - `tag` table stores `embedding vector(1536)` — used only for normalization at ingest, not for search
 - Threshold tuning deferred to evaluation stage — err on the side of fragmentation over false merge
 
 ## Prerequisites
 - Topic names extracted at ingest time via LLM — stored in `prerequisite` table (UNIQUE per topic name), linked to blogs via `blog_prerequisite` junction table
-- **Normalization pipeline:** embed extracted topic name via `Embedder.embed()` → cosine similarity check against existing prerequisites in DB (threshold: 0.95) → use existing `prerequisite_id` or insert new prerequisite
+- **Normalization pipeline:** embed extracted topic name via `Embedder.embed()` → cosine similarity check against existing prerequisites in DB (threshold: 0.88) → use existing `prerequisite_id` or insert new prerequisite
 - **Embedding timing:** embedding is computed inline at ingest and stored in the same insert as the topic name — there is no separate embedding step. `create_prerequisite(topic_name, embedding)` writes both together.
 - `prerequisite` table stores `embedding vector(1536)` — used only for normalization at ingest, not for search
 - Explanation (primer + deep dive) generated on-demand when user clicks a topic chip — single LLM call returns both
