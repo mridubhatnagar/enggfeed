@@ -26,7 +26,7 @@
 
 **Question:** Which LLM model for tagging, and what does the prompt look like?
 
-- Tags are LLM freeform — normalization via embedding + cosine similarity (threshold: 0.95) at ingest. See `docs/tech_decisions.md` Tags section.
+- Tags are LLM freeform — normalization via embedding + cosine similarity (threshold: 0.88) at ingest. See `docs/tech_decisions.md` Tags section.
 - Open question: whether to feed existing RSS `<category>` values to LLM as hints — decide after evaluating tagging quality in practice
 - Prompt lives in `prompts/ingest.py`
 

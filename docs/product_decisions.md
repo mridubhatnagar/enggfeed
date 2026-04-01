@@ -36,7 +36,7 @@ Signed-in users can additionally browse by topic tags, see prerequisite topics, 
 - LLM freeform — tags are not constrained to a predefined list
 - Clickable on cards to filter the feed
 - **Open:** Whether to feed existing RSS categories to LLM as hints — decide after evaluating tagging quality in practice
-- **Normalization pipeline:** string normalize (lowercase, strip, collapse separators) → embed → cosine similarity check against existing tags (threshold: 0.95) → use existing canonical tag or insert new. Same pipeline as prerequisites.
+- **Normalization pipeline:** string normalize (lowercase, strip, collapse separators) → embed → cosine similarity check against existing tags (threshold: 0.88) → use existing canonical tag or insert new. Same pipeline as prerequisites.
 - False merge risk accepted — threshold is tunable at evaluation stage. When uncertain, prefer fragmentation over false merge.
 
 ## ELI5 (Simplify)
