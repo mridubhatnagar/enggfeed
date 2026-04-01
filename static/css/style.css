@@ -491,5 +491,12 @@
     }
     .btn-switch-mode:hover { border-color: var(--accent); color: var(--accent); }
 
+    /* ── Mobile overrides ─────────────────────────────────────── */
+    @media (max-width: 480px) {
+      .navbar-name { display: none; }
+      .ad-unit { flex-direction: column; align-items: flex-start; }
+      .ad-cta { align-self: flex-end; }
+    }
+
     /* ── Utility ───────────────────────────────────────────────── */
     [x-cloak] { display: none !important; }
