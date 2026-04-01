@@ -7,8 +7,8 @@ This product solves for both — one place to discover, read, and understand eng
 
 ## What
 A one stop aggregator platform for reading engineering blogs from big tech companies.
-All users can browse, filter blogs by company, search articles, and read the full article on the original site.
-Signed-in users can additionally see blog tags, prerequisite topics, use smarter semantic search, and ask for summary or simplified explanation.
+All users can browse and filter blogs by company, and read the full article on the original site.
+Signed-in users can additionally browse by topic tags, see prerequisite topics, and get AI summaries and simplified explanations.
 
 
 ## Product Features
@@ -18,20 +18,15 @@ Signed-in users can additionally see blog tags, prerequisite topics, use smarter
 - Sign in button in top navbar
 
 ## User Tiers
-- **Guest**: Browse, filter by company, keyword search
-- **Signed-in**: All features unlocked including hybrid search, tags, summary, simplify
-
-## Search
-- Available to all users — search bar visible in feed row for everyone
-- Guest: keyword (full text) search only
-- Signed-in: hybrid keyword + semantic search
+- **Guest**: Browse, filter by company
+- **Signed-in**: All features unlocked — topic tags, prerequisites, summary, simplify
 
 ## Content Tiers (based on RSS content word count)
-| Tier | Condition | Features | Search |
-|------|-----------|----------|--------|
-| Limited | < 150 words | Full Read only + badge | Excluded |
-| Partial | 150–300 words | Full Read + Summary + Tags, no ELI5 | Included |
-| Full | 300+ words | All features | Included |
+| Tier | Condition | Features |
+|------|-----------|----------|
+| Limited | < 150 words | Full Read only + badge |
+| Partial | 150–300 words | Full Read + Summary + Tags, no ELI5 |
+| Full | 300+ words | All features |
 
 ## Card Visuals
 - `og:image` scraped from the article page at ingest — URL stored, image served from their CDN (unique thumbnail per article)
@@ -41,7 +36,7 @@ Signed-in users can additionally see blog tags, prerequisite topics, use smarter
 - LLM freeform — tags are not constrained to a predefined list
 - Clickable on cards to filter the feed
 - **Open:** Whether to feed existing RSS categories to LLM as hints — decide after evaluating tagging quality in practice
-- **Normalization pipeline:** string normalize (lowercase, strip, collapse separators) → embed → cosine similarity check against existing tags (threshold: 0.95) → use existing canonical tag or insert new. Same pipeline as prerequisites.
+- **Normalization pipeline:** string normalize (lowercase, strip, collapse separators) → embed → cosine similarity check against existing tags (threshold: 0.88) → use existing canonical tag or insert new. Same pipeline as prerequisites.
 - False merge risk accepted — threshold is tunable at evaluation stage. When uncertain, prefer fragmentation over false merge.
 
 ## ELI5 (Simplify)
@@ -78,8 +73,7 @@ Signed-in users can additionally see blog tags, prerequisite topics, use smarter
 
 ## Non-Signed-In Button Behavior
 - Summary and Simplify buttons visible but locked — on click: show "Sign in with Google" modal
-- Search available for non-signed-in users but restricted to keyword only — semantic search is auth-gated
-- Tags hidden from non-signed-in users
+- Tags and prerequisites hidden from non-signed-in users
 
 ## Initial Blog Scope
 - 15–25 curated company blogs

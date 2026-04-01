@@ -37,8 +37,6 @@ Resolve these before starting the relevant agent. Do not leave them to the agent
 - [x] **SQLAlchemy ORM models location** — per-module `models.py` (e.g. `auth/models.py`, `blog/models.py`). Agent files updated.
 - [x] **LLM model** — `claude-sonnet-4-6` confirmed.
 - [x] **Embedding model** — `text-embedding-3-small` via OpenAI SDK. Agent files updated.
-- [x] **Query embedding approach** — `embed_text(text: str) -> list[float]` added to `utils.py`. `BlogHandler._hybrid_search` imports and calls it. Agent files updated.
-- [x] **Chunker class signature** — `Chunker(max_tokens: int = 512)` with `chunk(text: str) -> list[str]`. Agent files updated.
 - [x] **Embedder class signature** — `Embedder()` with `embed(text: str) -> list[float]`. Single embedding only. Agent files updated.
 - [x] **Templates/static files location** — `templates/index.html` (served via `FileResponse`), `static/` (CSS, JS, images via `StaticFiles`). No Jinja2. Agent files updated.
 

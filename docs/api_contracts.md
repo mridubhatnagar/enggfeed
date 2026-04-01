@@ -115,7 +115,6 @@ class UserDetail(BaseModel):
 | source | string | all | Filter by company name |
 | page | int | 1 | Page number |
 | count | int | 20 | Page size |
-| search | string | none | Keyword search (guests: keyword only; signed-in: hybrid keyword + semantic) |
 | tag | string | none | Filter by tag name |
 
 **Schemas** (`blog/schemas.py`):
@@ -296,6 +295,29 @@ class SimplifyDetail(BaseModel):
   },
   "error": null
 }
+```
+
+---
+
+### `POST /api/v1/ingest`
+- **Role:** Internal — triggered by GitHub Actions cron (daily at 6 AM UTC)
+- Not listed in Swagger UI (`include_in_schema=False`)
+- Authenticated via `x-ingest-secret` header — validated against `INGEST_SECRET` env var using `secrets.compare_digest`
+- Returns `401` if header is missing or does not match
+
+**Headers:**
+| Header | Description |
+|--------|-------------|
+| x-ingest-secret | Shared secret matching `INGEST_SECRET` env var |
+
+**Response (success):** `APIResponse[None]`
+```json
+{ "success": true, "data": null, "error": null }
+```
+
+**Response (unauthorized):**
+```json
+{ "success": false, "data": null, "error": { "code": 401, "message": "Unauthorized" } }
 ```
 
 ---

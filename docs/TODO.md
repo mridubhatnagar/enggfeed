@@ -7,7 +7,6 @@
 - [x] **Embedding model** — `text-embedding-3-small` (1536 dimensions)
 - [x] **LLM model** — `claude-sonnet-4-6`
 - [x] **Ingest prompt** — finalised and in `prompts/ingest.py`
-- [x] **Query embedding approach** — inline in `BlogHandler._hybrid_search` via `Embedder.embed()`
 - [x] **Templates/static files location** — `templates/index.html`, static files in `static/`
 
 ---
@@ -37,14 +36,14 @@
 ### Tasks
 
 - [x] **Install and initialise Alembic**
-- [x] **Create initial migration** — pgvector extension + all 11 tables, UUID PKs, composite PKs, UNIQUE constraints
+- [x] **Create initial migration** — pgvector extension + all tables, UUID PKs, composite PKs, UNIQUE constraints
 
 ### ✅ Checkpoint 2 — Database
 
 - [x] `alembic upgrade head` runs without errors
-- [x] All 11 tables exist
+- [x] All tables exist
 - [x] `vector` extension enabled
-- [x] `blog_chunk.embedding`, `tag.embedding`, `prerequisite.embedding` are `vector(1536)`
+- [x] `tag.embedding`, `prerequisite.embedding` are `vector(1536)`
 - [x] Composite PKs on `blog_tag` and `blog_prerequisite`
 - [x] `topic_name` UNIQUE on `prerequisite`, `tag` UNIQUE on `tag`
 
@@ -114,21 +113,13 @@
 - [x] **`tags/dao.py`**
 - [x] **`tags/service.py`**
 
----
-
-### `search/` module
-
-- [x] **`search/dao.py`**
-- [x] **`search/service.py`**
-
-### ✅ Checkpoint 5 — Blog, Tags, Search modules
+### ✅ Checkpoint 5 — Blog and Tags modules
 
 - [x] `GET /api/v1/sources` — returns list of blog sources
 - [x] `GET /api/v1/blogs` — returns paginated blog list
 - [x] `GET /api/v1/blogs?source=<name>` — filters by source
 - [x] `GET /api/v1/blogs?page=2&count=5` — pagination works
-- [x] `GET /api/v1/blogs?search=<keyword>` as guest — keyword results
-- [x] `GET /api/v1/blogs?search=<keyword>` as signed-in — hybrid search results
+- [x] `GET /api/v1/blogs?tag=<name>` — filters by tag
 - [x] Signed-in response includes `tags` and `prerequisites` arrays
 - [x] Guest response has empty `tags` and `prerequisites`
 - [x] `content_tier` computed correctly from `word_count`
@@ -188,7 +179,6 @@
 
 ### `ingest/` module
 
-- [x] **`ingest/chunker.py`**
 - [x] **`ingest/embedder.py`**
 - [x] **`ingest/handler.py`**
 
@@ -196,13 +186,11 @@
 
 - [x] Ingest runs without errors
 - [x] New rows in `blog` table
-- [x] `blog_chunk` rows exist with non-null embeddings
 - [x] `tag` and `blog_tag` rows exist
 - [x] `prerequisite` and `blog_prerequisite` rows exist
 - [x] `thumbnail` populated where og:image found, NULL otherwise
 - [x] Second ingest run produces no duplicate `blog` rows
 - [x] `GET /api/v1/blogs` returns real ingested articles with tags and prerequisites
-- [x] Hybrid search returns sensible results for signed-in user
 
 ---
 
@@ -220,7 +208,6 @@
 - [x] **HTML shell** — navbar, feed row, blog card grid, modals, pagination, empty state
 - [x] **On page load** — `GET /auth/me`, `GET /api/v1/sources`, `GET /api/v1/blogs`
 - [x] **Company filter dropdown**
-- [x] **Search bar**
 - [x] **Blog card** — thumbnail, title, prerequisites chips, tags chips, Summary/Simplify buttons, content tier logic
 - [x] **Pagination**
 - [x] **Empty state**
@@ -238,7 +225,6 @@
 - [x] Feed loads with blog cards
 - [x] Company filter dropdown shows all sources
 - [x] Selecting a company filters the feed, URL updates
-- [x] Keyword search returns results, source filter clears
 - [x] Pagination works
 - [x] Blog card thumbnail and title open original article in new tab
 - [x] Summary + Simplify buttons clicking shows Sign In modal
@@ -264,4 +250,3 @@
 - [x] Summary page shows all required fields
 - [x] Simplify page shows correct content
 - [x] Cache serves repeated requests instantly
-- [x] Hybrid search returns semantically relevant results
