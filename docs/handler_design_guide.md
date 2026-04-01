@@ -119,7 +119,7 @@ Happy path:
 
 ---
 
-#### `get_blogs(source: str | None, tag: str | None, page, count, request) -> PaginatedBlogs`
+#### `get_blogs(sources: list[str] | None, tags: list[str] | None, page, count, request) -> PaginatedBlogs`
 Happy path:
 1. `decode_jwt_token(request)` — if JWT present, set `is_signed_in = True`
 2. If `source` present → `blog_source_service.get_source_by_name(source)` → `source_id`
