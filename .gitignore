@@ -12,3 +12,6 @@ __pycache__/
 .venv/
 *.egg-info/
 alembic/versions/*.pyc
+enggsystemfeed_data.sql
+enggsystemfeed_dump.sql
+frequently_used_commands.md
