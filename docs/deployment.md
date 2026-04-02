@@ -11,10 +11,13 @@
 
 ## One-Time Server Setup
 
-- [ ] Create DO droplet — Ubuntu 24.04 LTS, $6/month (1 vCPU, 1GB RAM)
-- [ ] SSH into droplet and install Docker + Docker Compose
-- [ ] Open ports: 80 (HTTP), 443 (HTTPS), 22 (SSH)
-- [ ] Point domain to droplet IP (or use droplet IP directly)
+- [x] Create DO droplet — Ubuntu 24.04 LTS, $6/month (1 vCPU, 1GB RAM)
+- [x] SSH into droplet and install Docker + Docker Compose
+- [x] Open ports: 80 (HTTP), 443 (HTTPS), 22 (SSH)
+- [x] Point domain to droplet IP (or use droplet IP directly)
+- [x] Install Nginx and configure reverse proxy (port 443 → 8000)
+- [x] Obtain SSL certificate via Let's Encrypt (Certbot)
+- [x] Add 1GB swap (droplet has 1GB RAM — swap prevents OOM with 4 services running)
 
 ---
 
@@ -44,28 +47,13 @@ Create `.env.prod` on the server (never commit this):
 
 ## Google OAuth
 
-- [ ] Add `https://<your-domain>/auth/callback` as an authorised redirect URI in Google Cloud Console
+- [x] Add `https://enggfeed.mridulabs.dev/auth/callback` as an authorised redirect URI in Google Cloud Console
 
 ---
 
 ## Database Migration (Local → Prod)
 
-No re-ingest needed on prod — copy the seeded and ingested data from local.
-
-```bash
-# On local machine — dump application tables
-pg_dump \
-  --no-owner --no-acl \
-  -t blog_source -t blog -t tag -t blog_tag -t prerequisite -t blog_prerequisite -t allowed_users \
-  -h localhost -p 5432 -U <local_user> enggsystemfeed \
-  > enggsystemfeed_dump.sql
-
-# Copy dump to server
-scp enggsystemfeed_dump.sql root@<droplet-ip>:~/
-
-# On server — restore into prod DB (after containers are up)
-docker exec -i postgresql psql -U <prod_user> enggsystemfeed < ~/enggsystemfeed_dump.sql
-```
+No re-ingest needed on prod — copy the seeded and ingested data from local. See `frequently_used_commands.md` → Database Migration section for the full commands.
 
 ---
 
@@ -118,9 +106,9 @@ To be set up after getting acquainted with Digital Ocean.
 
 ## Verify Deployment
 
-- [ ] `GET /` returns the feed page
-- [ ] Google OAuth login works end-to-end
-- [ ] `GET /api/v1/blogs` returns articles
+- [x] `GET /` returns the feed page
+- [x] Google OAuth login works end-to-end
+- [x] `GET /api/v1/blogs` returns articles
 - [ ] Summary / Simplify / Prerequisites work for a signed-in user
 - [ ] Trigger ingest manually via GitHub Actions — verify new rows appear in DB
 - [ ] Phoenix UI accessible and showing traces
