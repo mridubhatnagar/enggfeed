@@ -10,9 +10,6 @@ class AuthError(Exception):
     """Raised on OAuth flow failure (bad state, token exchange error, etc.)."""
 
 
-class NotAllowedError(AuthError):
-    """Raised when an authenticated user's email is not in the allowlist."""
-
 
 class ForbiddenError(Exception):
     """Raised when a content tier check fails."""

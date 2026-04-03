@@ -26,13 +26,12 @@ async def submit_feedback(
     handler: FeedbackHandler = Depends(get_feedback_handler),
 ):
     try:
-        handler.submit_feedback(
+        return handler.submit_feedback(
             blog_id=body.blog_id,
             type=body.type,
             content=body.content,
             request=request,
         )
-        return APIResponse(success=True, data=None, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
             success=False,

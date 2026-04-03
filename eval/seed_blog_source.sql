@@ -1,4 +1,4 @@
--- Seed blog_source and allowed_users
+-- Seed blog_source
 -- Run via pgAdmin or: docker exec -i <postgres_container> psql -U <user> -d <db> < eval/seed_blog_source.sql
 
 INSERT INTO blog_source (id, source, rss_feed_link, created_at) VALUES
@@ -17,7 +17,3 @@ INSERT INTO blog_source (id, source, rss_feed_link, created_at) VALUES
   (gen_random_uuid(), 'Stripe',              'https://stripe.com/blog/feed.rss',                   now())
 ON CONFLICT DO NOTHING;
 
--- Replace with your email
-INSERT INTO allowed_users (id, email) VALUES
-  (gen_random_uuid(), 'mridubhatnagar4@gmail.com')
-ON CONFLICT DO NOTHING;
