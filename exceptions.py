@@ -28,3 +28,11 @@ class RSSFeedError(Exception):
 
 class LLMUnreachableError(Exception):
     """Raised when an LLM call fails, times out, or returns invalid JSON."""
+
+
+class RateLimitError(Exception):
+    """Raised when a rate limit is exceeded."""
+
+
+class ValidationError(Exception):
+    """Raised when request content fails server-side validation."""

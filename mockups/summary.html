@@ -365,6 +365,81 @@
     }
 
     .btn-primary:hover { background: #4338CA; border-color: #4338CA; }
+
+    /* ── Report link ── */
+    .btn-report {
+      background: none;
+      border: none;
+      font-size: 12px;
+      color: #9CA3AF;
+      cursor: pointer;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 32px;
+      margin-bottom: 8px;
+    }
+
+    .btn-report:hover { color: #EF4444; }
+
+    /* ── Feedback Modal ── */
+    .feedback-modal .modal {
+      max-width: 400px;
+    }
+
+    .feedback-subtitle {
+      font-size: 13px;
+      color: #6B7280;
+      margin-bottom: 16px;
+    }
+
+    .feedback-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #9CA3AF;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .feedback-textarea {
+      width: 100%;
+      border: 1px solid #E5E7EB;
+      border-radius: 6px;
+      padding: 9px 12px;
+      font-size: 13px;
+      color: #111827;
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+      outline: none;
+    }
+
+    .feedback-textarea:focus { border-color: #4F46E5; }
+
+    .feedback-char-count {
+      font-size: 11px;
+      color: #9CA3AF;
+      text-align: right;
+      margin-top: 4px;
+    }
+
+    .btn-feedback-submit {
+      width: 100%;
+      padding: 9px 0;
+      background: #4F46E5;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 14px;
+    }
+
+    .btn-feedback-submit:hover { background: #4338CA; }
   </style>
 </head>
 <body>
@@ -431,6 +506,9 @@
       <p>The announcement includes support for Kimi K2.5 and other frontier models, with Cloudflare positioning Workers AI as the ideal platform for running autonomous agents that require fast, reliable, and cost-effective model inference at scale.</p>
     </div>
 
+    <!-- Report link -->
+    <button class="btn-report" onclick="openFeedbackModal()">⚑ Report incorrect summary</button>
+
     <!-- Ad Unit -->
     <div class="ad-unit">
       <div class="ad-body">
@@ -447,6 +525,19 @@
       <a class="btn-primary" href="/simplify">Simplify →</a>
     </div>
 
+  </div>
+
+  <!-- Feedback Modal -->
+  <div class="modal-overlay feedback-modal" id="feedbackModal" onclick="if(event.target===this)closeFeedbackModal()">
+    <div class="modal">
+      <button class="modal-close" onclick="closeFeedbackModal()">✕</button>
+      <div class="modal-topic" style="font-size:16px; margin-bottom:6px;">Report incorrect summary</div>
+      <div class="feedback-subtitle">What's incorrect about this summary?</div>
+      <label class="feedback-label">Your feedback</label>
+      <textarea class="feedback-textarea" id="feedbackText" placeholder="Describe what's wrong..." maxlength="500" oninput="updateCount()"></textarea>
+      <div class="feedback-char-count"><span id="charCount">0</span> / 500</div>
+      <button class="btn-feedback-submit" onclick="closeFeedbackModal()">Submit</button>
+    </div>
   </div>
 
   <!-- Prerequisite Modal -->
@@ -513,7 +604,14 @@
 
     function closeModal() { document.getElementById('prereqModal').classList.remove('open'); }
     function handleOverlayClick(e) { if (e.target === document.getElementById('prereqModal')) closeModal(); }
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    function openFeedbackModal() { document.getElementById('feedbackModal').classList.add('open'); }
+    function closeFeedbackModal() { document.getElementById('feedbackModal').classList.remove('open'); }
+    function updateCount() {
+      document.getElementById('charCount').textContent = document.getElementById('feedbackText').value.length;
+    }
+
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeFeedbackModal(); } });
   </script>
 
 </body>

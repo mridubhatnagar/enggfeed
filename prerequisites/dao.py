@@ -91,7 +91,6 @@ class PrerequisiteDAO(IPrerequisiteDAO):
             self.db.refresh(prereq)
             return prereq
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create prerequisite: {exc}") from exc
 
     @cache.set(key_prefix=_KEY_PREFIX, timeout=_DEFAULT_TIMEOUT, key_args=(0,))
@@ -112,7 +111,6 @@ class PrerequisiteDAO(IPrerequisiteDAO):
             self.db.refresh(prereq)
             return prereq
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to update prerequisite: {exc}") from exc
 
 
@@ -163,5 +161,4 @@ class BlogPrerequisiteDAO(IBlogPrerequisiteDAO):
             self.db.refresh(bp)
             return bp
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create blog prerequisite: {exc}") from exc
