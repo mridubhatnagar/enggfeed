@@ -199,9 +199,10 @@ class IngestHandler:
             guid, llm_result, tags, prerequisites,
         )
 
+        linked_tag_ids: set = set()
         for tag_name in tags:
             try:
-                self._process_tag(blog_id, tag_name)
+                self._process_tag(blog_id, tag_name, linked_tag_ids)
             except Exception as exc:
                 logger.error(
                     "Error processing tag '%s' for guid='%s': %s",
@@ -210,9 +211,10 @@ class IngestHandler:
                     exc,
                 )
 
+        linked_prerequisite_ids: set = set()
         for topic_name in prerequisites:
             try:
-                self._process_prerequisite(blog_id, topic_name)
+                self._process_prerequisite(blog_id, topic_name, linked_prerequisite_ids)
             except Exception as exc:
                 logger.error(
                     "Error processing prerequisite '%s' for guid='%s': %s",
@@ -241,7 +243,7 @@ class IngestHandler:
         name = re.sub(r"-{2,}", "-", name)
         return name
 
-    def _process_tag(self, blog_id: str, tag_name: str) -> None:
+    def _process_tag(self, blog_id: str, tag_name: str, linked_tag_ids: set) -> None:
         """Normalize, embed, find-or-create tag, link to blog.
 
         Wraps the normalisation decision in an OTel span with attributes:
@@ -267,9 +269,13 @@ class IngestHandler:
                 new_tag = self.tag_service.create_tag(normalized, embedding)
                 tag_id = new_tag.tag_id
 
+        if tag_id in linked_tag_ids:
+            logger.debug("Tag '%s' already linked to blog, skipping", normalized)
+            return
         self.blog_tag_service.create_blog_tag(blog_id, tag_id)
+        linked_tag_ids.add(tag_id)
 
-    def _process_prerequisite(self, blog_id: str, topic_name: str) -> None:
+    def _process_prerequisite(self, blog_id: str, topic_name: str, linked_prerequisite_ids: set) -> None:
         """Normalize, embed, find-or-create prerequisite, link to blog.
 
         Wraps the normalisation decision in an OTel span with attributes:
@@ -300,4 +306,8 @@ class IngestHandler:
                 )
                 prerequisite_id = new_prereq.id
 
+        if prerequisite_id in linked_prerequisite_ids:
+            logger.debug("Prerequisite '%s' already linked to blog, skipping", normalized)
+            return
         self.blog_prerequisite_service.create_blog_prerequisite(blog_id, prerequisite_id)
+        linked_prerequisite_ids.add(prerequisite_id)
