@@ -91,7 +91,6 @@ class TagDAO(ITagDAO):
             self.db.refresh(tag)
             return tag
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create tag: {exc}") from exc
 
 
@@ -141,5 +140,4 @@ class BlogTagDAO(IBlogTagDAO):
             self.db.refresh(blog_tag)
             return blog_tag
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create blog tag: {exc}") from exc

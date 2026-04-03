@@ -41,7 +41,6 @@ class SimplifyDAO(ISimplifyDAO):
             self.db.refresh(row)
             return row
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create simplify: {exc}") from exc
 
     @cache.set(key_prefix=_KEY_PREFIX, timeout=_DEFAULT_TIMEOUT, key_args=(0,))
@@ -58,5 +57,4 @@ class SimplifyDAO(ISimplifyDAO):
         except DatabaseError:
             raise
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to update simplify: {exc}") from exc

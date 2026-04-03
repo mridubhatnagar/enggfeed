@@ -124,7 +124,6 @@ class BlogDAO(IBlogDAO):
             self.db.commit()
             self.db.refresh(blog)
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to insert blog: {exc}") from exc
 
     def _build_query(
