@@ -19,13 +19,15 @@ def get_prerequisite_handler(db: Session = Depends(get_db)) -> PrerequisiteHandl
 
 
 @router.get("/api/v1/prerequisites/{topic_name}")
-async def get_prerequisite(
+def get_prerequisite(
     topic_name: str,
     request: Request,
     handler: PrerequisiteHandler = Depends(get_prerequisite_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
-        return handler.get_prerequisite(topic_name=topic_name, request=request)
+        result = handler.get_prerequisite(topic_name=topic_name, token=token)
+        return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
             success=False,

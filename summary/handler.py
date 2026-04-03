@@ -1,8 +1,6 @@
 import math
 import uuid
 
-from fastapi import Request
-
 from auth.utils import decode_jwt_token
 from blog.schemas import BlogItem, ContentTier
 from blog.service import BlogService, BlogSourceService
@@ -11,7 +9,6 @@ from exceptions import ForbiddenError, NotFoundError, RSSFeedError, Unauthorized
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.summary import SUMMARY_PROMPT
 from rss_client import RSSClient
-from schemas import APIResponse
 from summary.schemas import SummaryContent, SummaryDetail
 from summary.service import SummaryService
 from tags.service import BlogTagService, TagService
@@ -47,8 +44,7 @@ class SummaryHandler:
         self.prerequisite_service = prerequisite_service
         self.rss_client = rss_client
 
-    def get_summary(self, blog_id: str, request: Request) -> APIResponse:
-        token = request.cookies.get("access_token")
+    def get_summary(self, blog_id: str, token: str | None) -> SummaryDetail:
         if not token:
             raise UnauthorizedError("Authentication required")
         decode_jwt_token(token)
@@ -120,8 +116,4 @@ class SummaryHandler:
             updated_at=summary_row.updated_at,
         )
 
-        return APIResponse(
-            success=True,
-            data=SummaryDetail(blog=blog_item, summary=summary_content),
-            error=None,
-        )
+        return SummaryDetail(blog=blog_item, summary=summary_content)

@@ -299,6 +299,40 @@ class SimplifyDetail(BaseModel):
 
 ---
 
+### `POST /api/v1/feedback`
+- **Role:** USER
+- Requires JWT cookie
+- Submits feedback for a blog — one request per type
+- Only inserted if `content` is non-empty after stripping whitespace
+- Rate limited: 5 submissions per user per day — returns 429 if exceeded
+- Validates `content` length server-side: min 10 chars, max 500 chars
+
+**Request body** (`feedback/schemas.py`):
+```python
+class FeedbackType(str, Enum):
+    TAG = "tag"
+    PREREQUISITE = "prerequisite"
+    SUMMARY = "summary"
+    SIMPLIFY = "simplify"
+
+class FeedbackRequest(BaseModel):
+    blog_id: uuid.UUID
+    type: FeedbackType
+    content: str
+```
+
+**Response (success):** `APIResponse[None]`
+```json
+{ "success": true, "data": null, "error": null }
+```
+
+**Response (rate limited):**
+```json
+{ "success": false, "data": null, "error": { "code": 429, "message": "You've reached the feedback limit for today. Try again tomorrow." } }
+```
+
+---
+
 ### `POST /api/v1/ingest`
 - **Role:** Internal — triggered by GitHub Actions cron (daily at 6 AM UTC)
 - Not listed in Swagger UI (`include_in_schema=False`)

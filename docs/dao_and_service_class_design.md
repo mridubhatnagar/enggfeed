@@ -5,7 +5,6 @@
 | Class | Module | File |
 |-------|--------|------|
 | UserDAO, UserService | auth/ | dao.py, service.py |
-| AllowedUserDAO, AllowedUserService | auth/ | dao.py, service.py |
 | BlogDAO, BlogService | blog/ | dao.py, service.py |
 | BlogSourceDAO, BlogSourceService | blog/ | dao.py, service.py |
 | SummaryDAO, SummaryService | summary/ | dao.py, service.py |
@@ -14,6 +13,7 @@
 | BlogTagDAO, BlogTagService | tags/ | dao.py, service.py |
 | PrerequisiteDAO, PrerequisiteService | prerequisites/ | dao.py, service.py |
 | BlogPrerequisiteDAO, BlogPrerequisiteService | prerequisites/ | dao.py, service.py |
+| FeedbackDAO, FeedbackService | feedback/ | dao.py, service.py |
 
 ---
 
@@ -46,21 +46,6 @@ class UserDAO(IUserDAO):
 
 ---
 
-### AllowedUser
-
-```python
-class IAllowedUserDAO(ABC):
-    @abstractmethod
-    def get_by_email(self, email: str): ...
-
-
-class AllowedUserDAO(IAllowedUserDAO):
-    def __init__(self, db: Session): ...
-    def get_by_email(self, email: str): ...
-
-```
-
----
 
 ### BlogSource
 
@@ -288,6 +273,29 @@ class BlogPrerequisiteDAO(IBlogPrerequisiteDAO):
 
 ---
 
+### Feedback
+
+```python
+class IFeedbackDAO(ABC):
+    @abstractmethod
+    def get_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
+
+    @abstractmethod
+    def create(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
+
+    @abstractmethod
+    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+
+
+class FeedbackDAO(IFeedbackDAO):
+    def __init__(self, db: Session): ...
+    def get_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
+    def create(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
+    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+```
+
+---
+
 ## Service Classes
 
 ---
@@ -303,14 +311,6 @@ class UserService:
 ```
 
 ---
-
-### AllowedUser
-
-```python
-class AllowedUserService:
-    def __init__(self, dao: IAllowedUserDAO): ...
-    def get_allowed_user_by_email(self, email: str): ...
-```
 
 ---
 
@@ -404,6 +404,18 @@ class PrerequisiteService:
     def find_similar_prerequisite(self, embedding: list[float], threshold: float): ...
     def create_prerequisite(self, topic_name: str, embedding: list[float]): ...
     def update_prerequisite(self, topic_name: str, content: dict): ...
+```
+
+---
+
+### Feedback
+
+```python
+class FeedbackService:
+    def __init__(self, dao: IFeedbackDAO): ...
+    def get_feedback_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
+    def create_feedback(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
+    def update_feedback(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
 ```
 
 ---

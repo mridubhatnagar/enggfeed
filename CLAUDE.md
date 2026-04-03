@@ -94,19 +94,28 @@ enggsystemfeed/
 │   ├── simplify.py
 │   ├── prerequisites.py
 │   └── ingest.py
+├── feedback/
+│   ├── __init__.py
+│   ├── controller.py
+│   ├── dao.py
+│   ├── enums.py
+│   ├── schemas.py
+│   ├── service.py
+│   └── handler.py
 ```
 
 ## Module Responsibilities
 
 | Module | Responsible for |
 |--------|----------------|
-| `auth/` | Google OAuth flow, state token verification, allowlist check, JWT issuance and validation |
+| `auth/` | Google OAuth flow, state token verification, JWT issuance and validation |
 | `blog/` | Blog listing, filtering by source and tag, pagination. Also owns `BlogSource` DAO and Service |
 | `summary/` | On-demand summary generation, 7-day refresh logic, cache management via `@cache.cached` |
 | `simplify/` | ELI5 generation, 7-day refresh logic, cache management |
 | `tags/` | Tag lookup by name, tag filtering on feed. Owns `Tag` and `BlogTag` DAO and Service |
 | `prerequisites/` | On-demand prerequisite explanation generation, 7-day refresh logic, cache management. Owns `Prerequisite` and `BlogPrerequisite` DAO and Service |
 | `ingest/` | RSS polling, og:image scraping, embedding, storing articles, tagging pipeline, prerequisites extraction. Exposes `POST /api/v1/ingest` endpoint triggered by GitHub Actions daily cron |
+| `feedback/` | User feedback submission for tags, prerequisites, summary, and simplify. Rate limiting via Redis. Exposes `POST /api/v1/feedback` endpoint |
 | `prompts/` | All LLM prompt templates — `summary.py`, `simplify.py`, `prerequisites.py`, `ingest.py` |
 
 **Rules:**
@@ -157,3 +166,6 @@ Controller → Handler → Service → DAO
 - `utils.py` at project root contains shared utilities: `check_refresh_due()`, `call_llm()`.
 - `auth/utils.py` contains auth-specific utilities: `generate_jwt_token()`, `decode_jwt_token()`.
 - `auth/client.py` contains `AuthClient` — wraps Google OAuth HTTP calls.
+
+### HTML comments
+- Do not use banner-style section divider comments (e.g. `<!-- ═══ SECTION ═══ -->`). Use plain inline comments only where the logic is not self-evident.

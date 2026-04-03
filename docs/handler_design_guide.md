@@ -299,3 +299,33 @@ Edge cases:
 - og:image scraping fails → insert blog with `thumbnail = None`
 - LLM call fails → log error, skip article
 - RSS feed unavailable → log error, skip source
+
+---
+
+## `feedback/` Handler Design
+
+### `FeedbackHandler`
+
+**Constructor dependencies:**
+- `feedback_service: FeedbackService`
+
+---
+
+#### `submit_feedback(blog_id: uuid.UUID, type: FeedbackType, content: str, request: Request) -> None`
+Happy path:
+1. `decode_jwt_token(request)` — reject if no valid JWT, extract `user_id`
+2. Check per-minute rate limit — Redis key `feedback:{user_id}:minute:{minute}` (TTL 60s), increment and check against `FEEDBACK_RATE_LIMIT_PER_MINUTE` from `constants.py`. If exceeded → raise `RateLimitError` (429)
+3. Check per-day rate limit — Redis key `feedback:{user_id}:{date}`, increment and check against `FEEDBACK_RATE_LIMIT_PER_DAY` from `constants.py`. If exceeded → raise `RateLimitError` (429)
+4. Strip `content` — if empty after stripping → return without inserting
+5. Validate `content` length — min 10 chars, max 500 chars → raise `ValidationError` if out of range
+6. `feedback_service.get_feedback_by_user_blog_type(user_id, blog_id, type)` — check if row exists
+   - If exists → `feedback_service.update_feedback(user_id, blog_id, type, content)`
+   - If not → `feedback_service.create_feedback(blog_id, user_id, type, content)`
+7. Return None
+
+Edge cases:
+- No JWT → reject with 401
+- Rate limit exceeded → 429
+- Content empty after strip → no insert, return success
+- Content too short (< 10) or too long (> 500) → 422
+- Duplicate submission (same user, blog, type) → update existing row

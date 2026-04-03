@@ -1,16 +1,9 @@
     function app() {
       return {
 
-        // ── Auth ────────────────────────────────────────────────
         user: null,
-
-        // ── View state: 'feed' | 'summary' | 'simplify' ────────
-        currentView: 'feed',
-
-        // ── Flash message ───────────────────────────────────────
         flashMessage: '',
 
-        // ── Feed state ──────────────────────────────────────────
         feedLoading: false,
         scrollLoading: false,
         blogs: [],          // array of { id, ...BlogItem } from /api/v1/blogs
@@ -24,28 +17,26 @@
         allLoaded: false,
         pageSize: 12,
 
-        // ── Detail (summary / simplify) ─────────────────────────
-        detailLoading: false,
-        currentBlogId: null,
-        summaryDetail: null,   // SummaryDetail from /api/v1/blogs/{id}/summary
-        simplifyDetail: null,  // SimplifyDetail from /api/v1/blogs/{id}/simplify
-
-        // ── Prerequisites modal ─────────────────────────────────
         showPrereqModal: false,
         prereqLoading: false,
         prereqTopic: '',
         prereqDetail: null,        // PrerequisiteDetail from /api/v1/prerequisites/{topic}
         prereqShowDeepDive: false,
 
-        // ── Sign In modal ───────────────────────────────────────
         showSigninModal: false,
 
-        // ── Share / copy feedback ───────────────────────────────
+        showFeedbackSuccess: false,
+        showFeedbackModal: false,
+        feedbackBlogId: null,
+        feedbackMode: null,        // 'card' | 'detail'
+        feedbackDetailType: null,  // 'summary' | 'simplify'
+        feedbackTagText: '',
+        feedbackPrereqText: '',
+        feedbackDetailText: '',
+        feedbackSubmitting: false,
+
         copied: false,
 
-        // ────────────────────────────────────────────────────────
-        // Initialisation
-        // ────────────────────────────────────────────────────────
         async _init() {
           // Read URL params first so bookmarked/shared URLs restore correctly
           this._readUrlParams();
@@ -64,9 +55,6 @@
           this._initInfiniteScroll();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Auth
-        // ────────────────────────────────────────────────────────
         async _fetchUser() {
           try {
             const res = await fetch('/auth/me', { credentials: 'include' });
@@ -87,7 +75,6 @@
             await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
           } catch (_) {}
           this.user = null;
-          this.goFeed();
           // Re-fetch so tags/prereqs disappear from cards immediately
           await this._fetchBlogs();
         },
@@ -97,9 +84,6 @@
           return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Sources
-        // ────────────────────────────────────────────────────────
         async _fetchSources() {
           try {
             const res = await fetch('/api/v1/sources');
@@ -110,9 +94,6 @@
           } catch (_) {}
         },
 
-        // ────────────────────────────────────────────────────────
-        // Tags
-        // ────────────────────────────────────────────────────────
         async _fetchTags() {
           try {
             const res = await fetch('/api/v1/tags');
@@ -142,9 +123,6 @@
           return map[sourceName] || (sourceName.toLowerCase().replace(/\s+/g, '') + '.com');
         },
 
-        // ────────────────────────────────────────────────────────
-        // Feed / blog listing
-        // ────────────────────────────────────────────────────────
         async _fetchBlogs() {
           this.blogs = [];
           this.currentPage = 1;
@@ -232,12 +210,6 @@
           this._fetchBlogs();
         },
 
-        filterByTagFromDetail(tag) {
-          // Navigate back to feed then apply tag filter
-          this.goFeed();
-          this.$nextTick(() => this.filterByTag(tag));
-        },
-
         clearFilters() {
           this.activeSources = [];
           this.activeTags    = [];
@@ -245,66 +217,6 @@
           this._fetchBlogs();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Summary page
-        // ────────────────────────────────────────────────────────
-        async openSummary(blogId) {
-          this.currentBlogId  = blogId;
-          this.summaryDetail  = null;
-          this.currentView    = 'summary';
-          this.detailLoading  = true;
-          window.scrollTo({ top: 0, behavior: 'instant' });
-          history.pushState({ view: 'summary', blogId }, '', `/summary/${encodeURIComponent(blogId)}`);
-          try {
-            const res  = await fetch(`/api/v1/blogs/${encodeURIComponent(blogId)}/summary`, { credentials: 'include' });
-            const json = await res.json();
-            if (json.success && json.data) {
-              this.summaryDetail = json.data;
-            } else {
-              this._handleDetailError();
-            }
-          } catch (_) {
-            this._handleDetailError();
-          } finally {
-            this.detailLoading = false;
-          }
-        },
-
-        // ────────────────────────────────────────────────────────
-        // Simplify page
-        // ────────────────────────────────────────────────────────
-        async openSimplify(blogId) {
-          this.currentBlogId  = blogId;
-          this.simplifyDetail = null;
-          this.currentView    = 'simplify';
-          this.detailLoading  = true;
-          window.scrollTo({ top: 0, behavior: 'instant' });
-          history.pushState({ view: 'simplify', blogId }, '', `/simplify/${encodeURIComponent(blogId)}`);
-          try {
-            const res  = await fetch(`/api/v1/blogs/${encodeURIComponent(blogId)}/simplify`, { credentials: 'include' });
-            const json = await res.json();
-            if (json.success && json.data) {
-              this.simplifyDetail = json.data;
-            } else {
-              this._handleDetailError();
-            }
-          } catch (_) {
-            this._handleDetailError();
-          } finally {
-            this.detailLoading = false;
-          }
-        },
-
-        _handleDetailError() {
-          // On error: stay on (or return to) feed, show flash message
-          this.goFeed();
-          this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
-          setTimeout(() => { this.flashMessage = ''; }, 6000);
-        },
-
-        // ────────────────────────────────────────────────────────
-        // Prerequisites modal
-        // ────────────────────────────────────────────────────────
         async openPrereqModal(topicName) {
           this.prereqTopic        = topicName;
           this.prereqDetail       = null;
@@ -323,18 +235,6 @@
           }
         },
 
-        // ────────────────────────────────────────────────────────
-        // Navigation helpers
-        // ────────────────────────────────────────────────────────
-        goFeed() {
-          this.currentView = 'feed';
-          this._pushUrl();
-          window.scrollTo({ top: 0, behavior: 'instant' });
-        },
-
-        // ────────────────────────────────────────────────────────
-        // URL sync (history.pushState)
-        // ────────────────────────────────────────────────────────
         _pushUrl() {
           const p = new URLSearchParams();
           if (this.activeSources.length) p.set('source', this.activeSources.join(','));
@@ -361,17 +261,81 @@
           this.activeTags = tag ? tag.split(',').filter(Boolean) : [];
         },
 
-        // ────────────────────────────────────────────────────────
-        // Global Escape key handler
-        // ────────────────────────────────────────────────────────
-        handleEsc() {
-          if (this.showPrereqModal) { this.showPrereqModal = false; return; }
-          if (this.showSigninModal) { this.showSigninModal = false; return; }
+        openCardFeedbackModal(blogId) {
+          this.feedbackBlogId    = blogId;
+          this.feedbackMode      = 'card';
+          this.feedbackTagText   = '';
+          this.feedbackPrereqText = '';
+          this.showFeedbackModal = true;
         },
 
-        // ────────────────────────────────────────────────────────
-        // Formatting helpers
-        // ────────────────────────────────────────────────────────
+        openDetailFeedbackModal(blogId, type) {
+          this.feedbackBlogId    = blogId;
+          this.feedbackMode      = 'detail';
+          this.feedbackDetailType = type;
+          this.feedbackDetailText = '';
+          this.showFeedbackModal = true;
+        },
+
+        async submitFeedback() {
+          if (this.feedbackSubmitting) return;
+          this.feedbackSubmitting = true;
+          try {
+            if (this.feedbackMode === 'card') {
+              const requests = [];
+              if (this.feedbackTagText.trim())
+                requests.push(this._postFeedback(this.feedbackBlogId, 'tag', this.feedbackTagText.trim()));
+              if (this.feedbackPrereqText.trim())
+                requests.push(this._postFeedback(this.feedbackBlogId, 'prerequisite', this.feedbackPrereqText.trim()));
+              if (requests.length === 0) { this.showFeedbackModal = false; return; }
+              const results = await Promise.all(requests);
+              const failed = results.find(r => !r.success);
+              if (failed) { this._showFeedbackError(failed); return; }
+            } else {
+              const result = await this._postFeedback(this.feedbackBlogId, this.feedbackDetailType, this.feedbackDetailText.trim());
+              if (!result.success) { this._showFeedbackError(result); return; }
+            }
+            this.showFeedbackModal = false;
+            this.showFeedbackSuccess = true;
+          } finally {
+            this.feedbackSubmitting = false;
+          }
+        },
+
+        async _postFeedback(blogId, type, content) {
+          try {
+            const res = await fetch('/api/v1/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ blog_id: blogId, type, content }),
+            });
+            return await res.json();
+          } catch (_) {
+            return { success: false, error: { code: 500, message: 'Network error. Please try again.' } };
+          }
+        },
+
+        _showFeedbackError(result) {
+          this.showFeedbackModal = false;
+          const code = result?.error?.code;
+          if (code === 429) {
+            this.flashMessage = "You've reached your feedback limit. Please try again later.";
+          } else if (code === 422) {
+            this.flashMessage = result?.error?.message || 'Feedback must be between 10 and 500 characters.';
+          } else {
+            this.flashMessage = 'Failed to submit feedback. Please try again.';
+          }
+          setTimeout(() => { this.flashMessage = ''; }, 6000);
+        },
+
+        handleEsc() {
+          if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
+          if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
+          if (this.showPrereqModal)     { this.showPrereqModal     = false; return; }
+          if (this.showSigninModal)     { this.showSigninModal     = false; return; }
+        },
+
         copyUrl(url) {
           navigator.clipboard.writeText(url).then(() => {
             this.copied = true;
@@ -403,3 +367,12 @@
 
       }; // end return
     } // end app()
+
+    function openCardFeedbackModal(blogId) {
+      const data = Alpine.$data(document.querySelector('[x-data]'));
+      data.feedbackBlogId     = blogId;
+      data.feedbackMode       = 'card';
+      data.feedbackTagText    = '';
+      data.feedbackPrereqText = '';
+      data.showFeedbackModal  = true;
+    }

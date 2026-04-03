@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy.orm import Session
 
-from auth.models import AllowedUser, User
+from auth.models import User
 from exceptions import DatabaseError
 
 
@@ -47,21 +47,5 @@ class UserDAO(IUserDAO):
             self.db.refresh(user)
             return user
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create user: {exc}") from exc
 
-
-class IAllowedUserDAO(ABC):
-    @abstractmethod
-    def get_by_email(self, email: str): ...
-
-
-class AllowedUserDAO(IAllowedUserDAO):
-    def __init__(self, db: Session) -> None:
-        self.db = db
-
-    def get_by_email(self, email: str) -> AllowedUser | None:
-        try:
-            return self.db.query(AllowedUser).filter(AllowedUser.email == email).first()
-        except Exception as exc:
-            raise DatabaseError(f"Failed to fetch allowed user by email: {exc}") from exc

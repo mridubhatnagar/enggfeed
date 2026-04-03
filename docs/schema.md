@@ -15,16 +15,6 @@
 
 ---
 
-### allowed_users
-| Column | Type |
-|--------|------|
-| id | uuid (PK) |
-| email | text |
-
-**Reasoning:** Product is not open to all. Only users whose email is in `allowed_users` can access the platform. An email can exist in `allowed_users` without the person being a registered user — so there is no relationship between `allowed_users` and `user`. At login time: Google authentication happens first, then email is checked against `allowed_users`. If not present, the user is rejected.
-
----
-
 ### blog_source
 | Column | Type |
 |--------|------|
@@ -134,6 +124,21 @@
 
 ---
 
+### feedback
+| Column | Type | Constraint |
+|--------|------|------------|
+| id | uuid (PK) | |
+| blog_id | uuid (FK → blog) | |
+| user_id | uuid (FK → user) | |
+| type | text | enum: 'tag', 'prerequisite', 'summary', 'simplify' |
+| content | text | |
+| created_at | timestamp | |
+| | | UNIQUE (user_id, blog_id, type) |
+
+**Reasoning:** One feedback row per user per blog per type. `type` distinguishes between tag, prerequisite, summary, and simplify feedback — a user can submit all four types for the same blog independently. `content` stores free-text from the user. A row is only inserted if content is non-empty. Review is manual by admin — no auto-apply.
+
+---
+
 ## ER Diagram
 
 ```mermaid
@@ -209,9 +214,13 @@ erDiagram
         profile_url text
     }
 
-    allowed_users {
+    feedback {
         id uuid PK
-        email text
+        blog_id uuid FK
+        user_id uuid FK
+        type text
+        content text
+        created_at timestamp
     }
 
     blog_source ||--o{ blog : "has"
@@ -221,6 +230,8 @@ erDiagram
     prerequisite ||--o{ blog_prerequisite : "has"
     blog ||--o{ blog_tag : "has"
     tag ||--o{ blog_tag : "has"
+    blog ||--o{ feedback : "has"
+    user ||--o{ feedback : "has"
 ```
 
 ---
@@ -238,3 +249,5 @@ erDiagram
 | blog ↔ tag | Many-to-many (via blog_tag) |
 | blog → blog_tag | One-to-many |
 | tag → blog_tag | One-to-many |
+| blog → feedback | One-to-many |
+| user → feedback | One-to-many |

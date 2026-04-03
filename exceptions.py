@@ -10,9 +10,6 @@ class AuthError(Exception):
     """Raised on OAuth flow failure (bad state, token exchange error, etc.)."""
 
 
-class NotAllowedError(AuthError):
-    """Raised when an authenticated user's email is not in the allowlist."""
-
 
 class ForbiddenError(Exception):
     """Raised when a content tier check fails."""
@@ -28,3 +25,15 @@ class RSSFeedError(Exception):
 
 class LLMUnreachableError(Exception):
     """Raised when an LLM call fails, times out, or returns invalid JSON."""
+
+
+class RateLimitError(Exception):
+    """Raised when a rate limit is exceeded."""
+
+
+class ValidationError(Exception):
+    """Raised when request content fails server-side validation."""
+
+
+class FeedbackError(Exception):
+    """Raised when feedback submission fails due to an unexpected error."""
