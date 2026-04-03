@@ -1,8 +1,6 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import Request
-
 from auth.utils import decode_jwt_token
 from constants import (
     FEEDBACK_MAX_LENGTH,
@@ -22,9 +20,8 @@ class FeedbackHandler:
         self.feedback_service = feedback_service
 
     def submit_feedback(
-        self, blog_id: uuid.UUID, type: FeedbackType, content: str, request: Request
+        self, blog_id: uuid.UUID, type: FeedbackType, content: str, token: str | None
     ) -> APIResponse:
-        token = request.cookies.get("access_token")
         if not token:
             raise UnauthorizedError("Authentication required")
         payload = decode_jwt_token(token)

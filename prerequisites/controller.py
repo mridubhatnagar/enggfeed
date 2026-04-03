@@ -24,8 +24,9 @@ def get_prerequisite(
     request: Request,
     handler: PrerequisiteHandler = Depends(get_prerequisite_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
-        result = handler.get_prerequisite(topic_name=topic_name, request=request)
+        result = handler.get_prerequisite(topic_name=topic_name, token=token)
         return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(

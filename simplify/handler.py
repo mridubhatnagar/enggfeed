@@ -1,7 +1,5 @@
 import uuid
 
-from fastapi import Request
-
 from auth.utils import decode_jwt_token
 from blog.schemas import BlogItem, ContentTier
 from blog.service import BlogService, BlogSourceService
@@ -45,8 +43,7 @@ class SimplifyHandler:
         self.prerequisite_service = prerequisite_service
         self.rss_client = rss_client
 
-    def get_simplify(self, blog_id: str, request: Request) -> SimplifyDetail:
-        token = request.cookies.get("access_token")
+    def get_simplify(self, blog_id: str, token: str | None) -> SimplifyDetail:
         if not token:
             raise UnauthorizedError("Authentication required")
         decode_jwt_token(token)

@@ -45,8 +45,9 @@ def get_summary(
     request: Request,
     handler: SummaryHandler = Depends(get_summary_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
-        result = handler.get_summary(blog_id=blog_id, request=request)
+        result = handler.get_summary(blog_id=blog_id, token=token)
         return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(

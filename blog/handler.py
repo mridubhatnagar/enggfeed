@@ -1,14 +1,11 @@
 import math
-from fastapi import Request
 
-from auth.utils import decode_jwt_token
 from blog.schemas import BlogItem, BlogSource, ContentTier, PaginatedBlogs, TagWithCount
 from blog.service import BlogService, BlogSourceService
 from constants import (
     CONTENT_TIER_LIMITED_MAX_WORDS,
     CONTENT_TIER_PARTIAL_MAX_WORDS,
 )
-from exceptions import UnauthorizedError
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from tags.service import BlogTagService, TagService
 
@@ -44,18 +41,8 @@ class BlogHandler:
         tags: list[str] | None,
         page: int,
         count: int,
-        request: Request,
+        is_signed_in: bool,
     ) -> PaginatedBlogs:
-        # Determine if user is signed in — tolerate missing JWT silently
-        is_signed_in = False
-        try:
-            token = request.cookies.get("access_token")
-            if token:
-                decode_jwt_token(token)
-                is_signed_in = True
-        except UnauthorizedError:
-            is_signed_in = False
-
         source_ids = None
         tag_ids = None
 

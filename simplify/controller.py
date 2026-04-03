@@ -45,8 +45,9 @@ def get_simplify(
     request: Request,
     handler: SimplifyHandler = Depends(get_simplify_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
-        result = handler.get_simplify(blog_id=blog_id, request=request)
+        result = handler.get_simplify(blog_id=blog_id, token=token)
         return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(

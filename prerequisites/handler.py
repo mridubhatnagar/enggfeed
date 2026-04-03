@@ -1,5 +1,3 @@
-from fastapi import Request
-
 from auth.utils import decode_jwt_token
 from exceptions import NotFoundError, UnauthorizedError
 from prerequisites.schemas import Primer, PrerequisiteDetail
@@ -12,8 +10,7 @@ class PrerequisiteHandler:
     def __init__(self, prerequisite_service: PrerequisiteService) -> None:
         self.prerequisite_service = prerequisite_service
 
-    def get_prerequisite(self, topic_name: str, request: Request) -> PrerequisiteDetail:
-        token = request.cookies.get("access_token")
+    def get_prerequisite(self, topic_name: str, token: str | None) -> PrerequisiteDetail:
         if not token:
             raise UnauthorizedError("Authentication required")
         decode_jwt_token(token)

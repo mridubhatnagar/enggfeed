@@ -25,12 +25,13 @@ def submit_feedback(
     request: Request,
     handler: FeedbackHandler = Depends(get_feedback_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
         return handler.submit_feedback(
             blog_id=body.blog_id,
             type=body.type,
             content=body.content,
-            request=request,
+            token=token,
         )
     except UnauthorizedError as exc:
         return APIResponse(

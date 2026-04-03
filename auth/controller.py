@@ -18,6 +18,9 @@ from schemas import APIResponse, ErrorDetail
 
 router = APIRouter(tags=["auth"])
 
+_STATE_COOKIE = "oauth_state"
+_JWT_COOKIE = "access_token"
+
 
 def get_auth_handler(db: Session = Depends(get_db)) -> AuthHandler:
     user_dao = UserDAO(db)
@@ -37,8 +40,9 @@ def initiate(
     """Set oauth_state httpOnly cookie and return the Google OAuth consent screen URL.
     The frontend is responsible for redirecting to the returned URL."""
     try:
-        url = handler.initiate(response)
-        return APIResponse(success=True, data={"auth_url": url}, error=None)
+        state, auth_url = handler.initiate()
+        response.set_cookie(key=_STATE_COOKIE, value=state, httponly=True, samesite="lax", secure=False)
+        return APIResponse(success=True, data={"auth_url": auth_url}, error=None)
     except DatabaseError:
         return APIResponse(
             success=False,
@@ -52,12 +56,16 @@ def callback(
     code: str,
     state: str,
     request: Request,
+    response: Response,
     handler: AuthHandler = Depends(get_auth_handler),
 ):
     """Handle Google OAuth callback, issue JWT cookie."""
+    stored_state = request.cookies.get(_STATE_COOKIE)
     try:
+        jwt_token = handler.callback(code, state, stored_state)
+        response.delete_cookie(_STATE_COOKIE)
         redirect = RedirectResponse(url="/")
-        handler.callback(code, state, request, redirect)
+        redirect.set_cookie(key=_JWT_COOKIE, value=jwt_token, httponly=True, samesite="lax", secure=False)
         return redirect
     except AuthError:
         return RedirectResponse(url="/?error=auth_failed")
@@ -75,8 +83,9 @@ def me(
     handler: AuthHandler = Depends(get_auth_handler),
 ):
     """Return current user profile. Requires JWT cookie."""
+    token = request.cookies.get(_JWT_COOKIE)
     try:
-        user_detail = handler.me(request)
+        user_detail = handler.me(token)
         return APIResponse(success=True, data=user_detail, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
@@ -99,10 +108,7 @@ def me(
 
 
 @router.post("/auth/logout")
-def logout(
-    response: Response,
-    handler: AuthHandler = Depends(get_auth_handler),
-):
+def logout(response: Response):
     """Clear JWT cookie."""
-    handler.logout(response)
+    response.delete_cookie(_JWT_COOKIE)
     return APIResponse(success=True, data={"message": "Logged out"}, error=None)
