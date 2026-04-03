@@ -11,7 +11,7 @@ from constants import (
     FEEDBACK_RATE_LIMIT_PER_MINUTE,
 )
 from database import cache
-from exceptions import RateLimitError, UnauthorizedError, ValidationError
+from exceptions import FeedbackError, RateLimitError, UnauthorizedError, ValidationError
 from feedback.enums import FeedbackType
 from feedback.service import FeedbackService
 
@@ -30,19 +30,24 @@ class FeedbackHandler:
         user_id = uuid.UUID(payload["user_id"])
 
         now = datetime.now(tz=timezone.utc)
-        minute_key = f"feedback:{user_id}:minute:{now.strftime('%Y%m%d%H%M')}"
-        minute_count = cache._client.incr(minute_key)
-        if minute_count == 1:
-            cache._client.expire(minute_key, 60)
-        if minute_count > FEEDBACK_RATE_LIMIT_PER_MINUTE:
-            raise RateLimitError("Rate limit exceeded: too many requests per minute")
+        try:
+            minute_key = f"feedback:{user_id}:minute:{now.strftime('%Y%m%d%H%M')}"
+            minute_count = cache._client.incr(minute_key)
+            if minute_count == 1:
+                cache._client.expire(minute_key, 60)
+            if minute_count > FEEDBACK_RATE_LIMIT_PER_MINUTE:
+                raise RateLimitError("Rate limit exceeded: too many requests per minute")
 
-        day_key = f"feedback:{user_id}:{now.strftime('%Y%m%d')}"
-        day_count = cache._client.incr(day_key)
-        if day_count == 1:
-            cache._client.expire(day_key, 86400)
-        if day_count > FEEDBACK_RATE_LIMIT_PER_DAY:
-            raise RateLimitError("Rate limit exceeded: too many requests today")
+            day_key = f"feedback:{user_id}:{now.strftime('%Y%m%d')}"
+            day_count = cache._client.incr(day_key)
+            if day_count == 1:
+                cache._client.expire(day_key, 86400)
+            if day_count > FEEDBACK_RATE_LIMIT_PER_DAY:
+                raise RateLimitError("Rate limit exceeded: too many requests today")
+        except RateLimitError:
+            raise
+        except Exception as exc:
+            raise FeedbackError("Sorry, your feedback couldn't be processed. Please try again later.") from exc
 
         content = content.strip()
         if not content:

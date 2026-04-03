@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
 from database import get_db
-from exceptions import DatabaseError, RateLimitError, UnauthorizedError, ValidationError
+from exceptions import DatabaseError, FeedbackError, RateLimitError, UnauthorizedError, ValidationError
 from feedback.dao import FeedbackDAO
 from feedback.handler import FeedbackHandler
 from feedback.schemas import FeedbackRequest
@@ -51,13 +51,13 @@ async def submit_feedback(
             data=None,
             error=ErrorDetail(code=422, message=str(exc)),
         )
-    except DatabaseError as exc:
+    except DatabaseError:
         return APIResponse(
             success=False,
             data=None,
-            error=ErrorDetail(code=500, message=str(exc)),
+            error=ErrorDetail(code=500, message="Sorry, your feedback couldn't be processed. Please try again later."),
         )
-    except Exception as exc:
+    except FeedbackError as exc:
         return APIResponse(
             success=False,
             data=None,

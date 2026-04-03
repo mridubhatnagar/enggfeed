@@ -36,3 +36,7 @@ class RateLimitError(Exception):
 
 class ValidationError(Exception):
     """Raised when request content fails server-side validation."""
+
+
+class FeedbackError(Exception):
+    """Raised when feedback submission fails due to an unexpected error."""
