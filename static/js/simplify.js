@@ -24,7 +24,7 @@
         copied: false,
 
         async _init() {
-          const parts = window.location.pathname.split('/');
+          const parts = window.location.pathname.split('/').filter(Boolean);
           this.blogId = decodeURIComponent(parts[parts.length - 1]);
           await Promise.all([this._fetchUser(), this._load()]);
         },
