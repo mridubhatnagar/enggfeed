@@ -10,7 +10,6 @@ from exceptions import ForbiddenError, NotFoundError, RSSFeedError, Unauthorized
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.simplify import SIMPLIFY_PROMPT
 from rss_client import RSSClient
-from schemas import APIResponse
 from simplify.schemas import SimplifyContent, SimplifyDetail
 from simplify.service import SimplifyService
 from tags.service import BlogTagService, TagService
@@ -46,7 +45,7 @@ class SimplifyHandler:
         self.prerequisite_service = prerequisite_service
         self.rss_client = rss_client
 
-    def get_simplify(self, blog_id: str, request: Request) -> APIResponse:
+    def get_simplify(self, blog_id: str, request: Request) -> SimplifyDetail:
         token = request.cookies.get("access_token")
         if not token:
             raise UnauthorizedError("Authentication required")
@@ -114,8 +113,4 @@ class SimplifyHandler:
             updated_at=simplify_row.updated_at,
         )
 
-        return APIResponse(
-            success=True,
-            data=SimplifyDetail(blog=blog_item, simplify=simplify_content),
-            error=None,
-        )
+        return SimplifyDetail(blog=blog_item, simplify=simplify_content)

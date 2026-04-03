@@ -10,7 +10,6 @@ from constants import (
 )
 from exceptions import UnauthorizedError
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
-from schemas import APIResponse, ErrorDetail
 from tags.service import BlogTagService, TagService
 
 
@@ -46,7 +45,7 @@ class BlogHandler:
         page: int,
         count: int,
         request: Request,
-    ) -> APIResponse:
+    ) -> PaginatedBlogs:
         # Determine if user is signed in — tolerate missing JWT silently
         is_signed_in = False
         try:
@@ -83,7 +82,7 @@ class BlogHandler:
                     total_pages=0,
                     blogs={},
                 )
-                return APIResponse(success=True, data=paginated, error=None)
+                return paginated
             tag_ids = resolved
 
         blogs = self.blog_service.list_blogs(source_ids, tag_ids, None, page, count)
@@ -159,14 +158,12 @@ class BlogHandler:
             total_pages=total_pages,
             blogs=blog_items,
         )
-        return APIResponse(success=True, data=paginated, error=None)
+        return paginated
 
-    def get_sources(self) -> APIResponse:
+    def get_sources(self) -> list[BlogSource]:
         sources = self.blog_source_service.list_all_sources()
-        result = [BlogSource(id=s.id, source=s.source) for s in sources]
-        return APIResponse(success=True, data=result, error=None)
+        return [BlogSource(id=s.id, source=s.source) for s in sources]
 
-    def get_tags(self) -> APIResponse:
+    def get_tags(self) -> list[TagWithCount]:
         rows = self.tag_service.list_all_tags_with_counts()
-        result = [TagWithCount(tag=tag.tag, count=count) for tag, count in rows]
-        return APIResponse(success=True, data=result, error=None)
+        return [TagWithCount(tag=tag.tag, count=count) for tag, count in rows]

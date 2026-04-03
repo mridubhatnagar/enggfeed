@@ -25,7 +25,8 @@ async def get_prerequisite(
     handler: PrerequisiteHandler = Depends(get_prerequisite_handler),
 ):
     try:
-        return handler.get_prerequisite(topic_name=topic_name, request=request)
+        result = handler.get_prerequisite(topic_name=topic_name, request=request)
+        return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
             success=False,

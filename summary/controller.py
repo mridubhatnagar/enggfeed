@@ -46,7 +46,8 @@ async def get_summary(
     handler: SummaryHandler = Depends(get_summary_handler),
 ):
     try:
-        return handler.get_summary(blog_id=blog_id, request=request)
+        result = handler.get_summary(blog_id=blog_id, request=request)
+        return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
             success=False,

@@ -5,7 +5,6 @@ from exceptions import NotFoundError, UnauthorizedError
 from prerequisites.schemas import Primer, PrerequisiteDetail
 from prerequisites.service import PrerequisiteService
 from prompts.prerequisites import PREREQUISITES_PROMPT
-from schemas import APIResponse
 from utils import call_llm, check_refresh_due
 
 
@@ -13,7 +12,7 @@ class PrerequisiteHandler:
     def __init__(self, prerequisite_service: PrerequisiteService) -> None:
         self.prerequisite_service = prerequisite_service
 
-    def get_prerequisite(self, topic_name: str, request: Request) -> APIResponse:
+    def get_prerequisite(self, topic_name: str, request: Request) -> PrerequisiteDetail:
         token = request.cookies.get("access_token")
         if not token:
             raise UnauthorizedError("Authentication required")
@@ -41,13 +40,9 @@ class PrerequisiteHandler:
             example=content.get("example", ""),
         )
 
-        return APIResponse(
-            success=True,
-            data=PrerequisiteDetail(
-                topic_name=prereq.topic_name,
-                primer=primer,
-                deep_dive=content.get("deep_dive", ""),
-                updated_at=prereq.updated_at,
-            ),
-            error=None,
+        return PrerequisiteDetail(
+            topic_name=prereq.topic_name,
+            primer=primer,
+            deep_dive=content.get("deep_dive", ""),
+            updated_at=prereq.updated_at,
         )

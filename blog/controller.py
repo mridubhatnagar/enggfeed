@@ -45,13 +45,14 @@ async def get_blogs(
     sources = [s.strip() for s in source.split(",") if s.strip()] if source else None
     tags = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
     try:
-        return handler.get_blogs(
+        result = handler.get_blogs(
             sources=sources,
             tags=tags,
             page=page,
             count=count,
             request=request,
         )
+        return APIResponse(success=True, data=result, error=None)
     except DatabaseError as exc:
         return APIResponse(
             success=False,
@@ -69,7 +70,8 @@ async def get_blogs(
 @router.get("/api/v1/sources")
 async def get_sources(handler: BlogHandler = Depends(get_blog_handler)):
     try:
-        return handler.get_sources()
+        result = handler.get_sources()
+        return APIResponse(success=True, data=result, error=None)
     except DatabaseError as exc:
         return APIResponse(
             success=False,
@@ -87,7 +89,8 @@ async def get_sources(handler: BlogHandler = Depends(get_blog_handler)):
 @router.get("/api/v1/tags")
 async def get_tags(handler: BlogHandler = Depends(get_blog_handler)):
     try:
-        return handler.get_tags()
+        result = handler.get_tags()
+        return APIResponse(success=True, data=result, error=None)
     except DatabaseError as exc:
         return APIResponse(
             success=False,
