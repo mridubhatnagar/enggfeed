@@ -61,8 +61,18 @@ async def openapi_spec(credentials: HTTPBasicCredentials = Depends(_security)):
 
 
 @app.get("/")
-async def index():
+def index():
     return FileResponse("templates/index.html")
+
+
+@app.get("/summary/{blog_id}")
+def summary_page(blog_id: str):
+    return FileResponse("templates/summary.html")
+
+
+@app.get("/simplify/{blog_id}")
+def simplify_page(blog_id: str):
+    return FileResponse("templates/simplify.html")
 
 
 # [backend-auth] auth router
