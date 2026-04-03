@@ -34,7 +34,7 @@ def get_blog_handler(db: Session = Depends(get_db)) -> BlogHandler:
 
 
 @router.get("/api/v1/blogs")
-async def get_blogs(
+def get_blogs(
     request: Request,
     source: str | None = None,
     tag: str | None = None,
@@ -68,7 +68,7 @@ async def get_blogs(
 
 
 @router.get("/api/v1/sources")
-async def get_sources(handler: BlogHandler = Depends(get_blog_handler)):
+def get_sources(handler: BlogHandler = Depends(get_blog_handler)):
     try:
         result = handler.get_sources()
         return APIResponse(success=True, data=result, error=None)
@@ -87,7 +87,7 @@ async def get_sources(handler: BlogHandler = Depends(get_blog_handler)):
 
 
 @router.get("/api/v1/tags")
-async def get_tags(handler: BlogHandler = Depends(get_blog_handler)):
+def get_tags(handler: BlogHandler = Depends(get_blog_handler)):
     try:
         result = handler.get_tags()
         return APIResponse(success=True, data=result, error=None)

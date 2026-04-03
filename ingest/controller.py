@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/api/v1/ingest", include_in_schema=False)
-async def trigger_ingest(x_ingest_secret: str = Header(default="")):
+def trigger_ingest(x_ingest_secret: str = Header(default="")):
     if not settings.INGEST_SECRET or not secrets.compare_digest(
         x_ingest_secret, settings.INGEST_SECRET
     ):

@@ -30,7 +30,7 @@ def get_auth_handler(db: Session = Depends(get_db)) -> AuthHandler:
 
 
 @router.get("/auth/initiate")
-async def initiate(
+def initiate(
     response: Response,
     handler: AuthHandler = Depends(get_auth_handler),
 ):
@@ -48,7 +48,7 @@ async def initiate(
 
 
 @router.get("/auth/callback")
-async def callback(
+def callback(
     code: str,
     state: str,
     request: Request,
@@ -70,7 +70,7 @@ async def callback(
 
 
 @router.get("/auth/me", response_model=APIResponse[UserDetail])
-async def me(
+def me(
     request: Request,
     handler: AuthHandler = Depends(get_auth_handler),
 ):
@@ -99,7 +99,7 @@ async def me(
 
 
 @router.post("/auth/logout")
-async def logout(
+def logout(
     response: Response,
     handler: AuthHandler = Depends(get_auth_handler),
 ):

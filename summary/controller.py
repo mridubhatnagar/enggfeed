@@ -40,7 +40,7 @@ def get_summary_handler(db: Session = Depends(get_db)) -> SummaryHandler:
 
 
 @router.get("/api/v1/blogs/{blog_id}/summary")
-async def get_summary(
+def get_summary(
     blog_id: str,
     request: Request,
     handler: SummaryHandler = Depends(get_summary_handler),

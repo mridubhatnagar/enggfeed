@@ -40,7 +40,7 @@ def get_simplify_handler(db: Session = Depends(get_db)) -> SimplifyHandler:
 
 
 @router.get("/api/v1/blogs/{blog_id}/simplify")
-async def get_simplify(
+def get_simplify(
     blog_id: str,
     request: Request,
     handler: SimplifyHandler = Depends(get_simplify_handler),

@@ -20,7 +20,7 @@ def get_feedback_handler(db: Session = Depends(get_db)) -> FeedbackHandler:
 
 
 @router.post("/api/v1/feedback")
-async def submit_feedback(
+def submit_feedback(
     body: FeedbackRequest,
     request: Request,
     handler: FeedbackHandler = Depends(get_feedback_handler),
