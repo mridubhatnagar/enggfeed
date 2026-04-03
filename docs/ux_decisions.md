@@ -27,6 +27,7 @@
 - Title (clickable)
 - Prerequisites — shown above tags, signed-in users only (Partial + Full tier), max 3 chips visible, "+N more" if exceeds. Clicking a chip opens the prerequisite modal.
 - Tags — shown below prerequisites, signed-in users only, max 3 visible, "+N more" if exceeds
+- "⚑ Report incorrect tags, prerequisites" — text button below tags/prerequisites chips, above action buttons. Signed-in users only. Opens feedback modal with Suggested Tags and Suggested Prerequisites fields.
 - Summary + Simplify buttons
 - ↗ signal on card to indicate clicking opens in new tab
 
@@ -56,6 +57,7 @@
 - Summary/Simplify page only loads when data is successfully available
 - On error: user stays on main feed, flash message shown just below navbar — "Sorry, we are unable to process your request. Please try again after some time."
 - On error: user stays on main feed, flash message shown just below navbar
+- "⚑ Report incorrect summary / simplification" — small link below content body, above bottom buttons. Opens feedback modal with one field: describe what's wrong.
 - Bottom buttons:
   - **Summary page**: ← Back | Read Original ↗ | Simplify (hidden for Partial tier articles — ELI5 not available)
   - **Simplify page**: ← Back | Read Original ↗ | Summary

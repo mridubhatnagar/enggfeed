@@ -40,6 +40,17 @@
         // ── Sign In modal ───────────────────────────────────────
         showSigninModal: false,
 
+        // ── Feedback modal ──────────────────────────────────────
+        showFeedbackSuccess: false,
+        showFeedbackModal: false,
+        feedbackBlogId: null,
+        feedbackMode: null,        // 'card' | 'detail'
+        feedbackDetailType: null,  // 'summary' | 'simplify'
+        feedbackTagText: '',
+        feedbackPrereqText: '',
+        feedbackDetailText: '',
+        feedbackSubmitting: false,
+
         // ── Share / copy feedback ───────────────────────────────
         copied: false,
 
@@ -362,11 +373,84 @@
         },
 
         // ────────────────────────────────────────────────────────
+        // Feedback modal
+        // ────────────────────────────────────────────────────────
+        openCardFeedbackModal(blogId) {
+          this.feedbackBlogId    = blogId;
+          this.feedbackMode      = 'card';
+          this.feedbackTagText   = '';
+          this.feedbackPrereqText = '';
+          this.showFeedbackModal = true;
+        },
+
+        openDetailFeedbackModal(blogId, type) {
+          this.feedbackBlogId    = blogId;
+          this.feedbackMode      = 'detail';
+          this.feedbackDetailType = type;
+          this.feedbackDetailText = '';
+          this.showFeedbackModal = true;
+        },
+
+        async submitFeedback() {
+          if (this.feedbackSubmitting) return;
+          this.feedbackSubmitting = true;
+          try {
+            if (this.feedbackMode === 'card') {
+              const requests = [];
+              if (this.feedbackTagText.trim())
+                requests.push(this._postFeedback(this.feedbackBlogId, 'tag', this.feedbackTagText.trim()));
+              if (this.feedbackPrereqText.trim())
+                requests.push(this._postFeedback(this.feedbackBlogId, 'prerequisite', this.feedbackPrereqText.trim()));
+              if (requests.length === 0) { this.showFeedbackModal = false; return; }
+              const results = await Promise.all(requests);
+              const failed = results.find(r => !r.success);
+              if (failed) { this._showFeedbackError(failed); return; }
+            } else {
+              const result = await this._postFeedback(this.feedbackBlogId, this.feedbackDetailType, this.feedbackDetailText.trim());
+              if (!result.success) { this._showFeedbackError(result); return; }
+            }
+            this.showFeedbackModal = false;
+            this.showFeedbackSuccess = true;
+          } finally {
+            this.feedbackSubmitting = false;
+          }
+        },
+
+        async _postFeedback(blogId, type, content) {
+          try {
+            const res = await fetch('/api/v1/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ blog_id: blogId, type, content }),
+            });
+            return await res.json();
+          } catch (_) {
+            return { success: false, error: { code: 500, message: 'Network error. Please try again.' } };
+          }
+        },
+
+        _showFeedbackError(result) {
+          this.showFeedbackModal = false;
+          const code = result?.error?.code;
+          if (code === 429) {
+            this.flashMessage = "You've reached your feedback limit. Please try again later.";
+          } else if (code === 422) {
+            this.flashMessage = result?.error?.message || 'Feedback must be between 10 and 500 characters.';
+          } else {
+            this.flashMessage = 'Failed to submit feedback. Please try again.';
+          }
+          setTimeout(() => { this.flashMessage = ''; }, 6000);
+        },
+
+        // ────────────────────────────────────────────────────────
         // Global Escape key handler
         // ────────────────────────────────────────────────────────
         handleEsc() {
-          if (this.showPrereqModal) { this.showPrereqModal = false; return; }
-          if (this.showSigninModal) { this.showSigninModal = false; return; }
+          if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
+          if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
+          if (this.showPrereqModal)     { this.showPrereqModal     = false; return; }
+          if (this.showSigninModal)     { this.showSigninModal     = false; return; }
         },
 
         // ────────────────────────────────────────────────────────
@@ -403,3 +487,12 @@
 
       }; // end return
     } // end app()
+
+    function openCardFeedbackModal(blogId) {
+      const data = Alpine.$data(document.querySelector('[x-data]'));
+      data.feedbackBlogId     = blogId;
+      data.feedbackMode       = 'card';
+      data.feedbackTagText    = '';
+      data.feedbackPrereqText = '';
+      data.showFeedbackModal  = true;
+    }

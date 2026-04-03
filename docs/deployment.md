@@ -100,7 +100,7 @@ To be set up after initial deployment is verified.
 
 To be set up after getting acquainted with Digital Ocean.
 
-- [ ] Configure GitHub Actions workflow to SSH into droplet and run `git pull + docker compose up -d` on push to `production`
+- [x] Configure GitHub Actions workflow to SSH into droplet and run `git pull + docker compose up -d` on push to `production`
 
 ---
 

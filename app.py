@@ -85,6 +85,10 @@ app.include_router(simplify_router)
 from prerequisites.controller import router as prerequisites_router
 app.include_router(prerequisites_router)
 
+# feedback router
+from feedback.controller import router as feedback_router
+app.include_router(feedback_router)
+
 # ingest router
 from ingest.controller import router as ingest_router
 app.include_router(ingest_router)
