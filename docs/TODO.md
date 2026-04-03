@@ -219,6 +219,49 @@
 - [x] **CSS extracted to `static/css/style.css`**
 - [x] **JS extracted to `static/js/app.js`**
 
+---
+
+## Feedback module
+
+### Database
+
+- [ ] **New Alembic migration** — add `feedback` table with `(user_id, blog_id, type)` unique constraint
+- [ ] **Add `RateLimitError`** to `exceptions.py` with 429 HTTP mapping in controller
+- [ ] **Add `FEEDBACK_RATE_LIMIT_PER_MINUTE` and `FEEDBACK_RATE_LIMIT_PER_DAY`** to `constants.py`
+
+### Backend
+
+- [ ] **`feedback/models.py`** — `Feedback` ORM model
+- [ ] **`feedback/schemas.py`** — `FeedbackType` enum, `FeedbackRequest` schema
+- [ ] **`feedback/dao.py`** — `get_by_user_blog_type`, `create`, `update`
+- [ ] **`feedback/service.py`** — `get_feedback_by_user_blog_type`, `create_feedback`, `update_feedback`
+- [ ] **`feedback/handler.py`** — rate limit checks (per-minute + per-day), content validation, create vs update logic
+- [ ] **`feedback/controller.py`** — `POST /api/v1/feedback`, wire into `app.py`
+- [ ] **`feedback/__init__.py`**
+
+### Frontend
+
+- [ ] **Feed card** — "⚑ Report incorrect tags, prerequisites" button opens feedback modal (signed-in only)
+- [ ] **Feedback modal (card)** — two fields: Suggested Tags, Suggested Prerequisites. On submit, send up to two requests (one per non-empty field). Show char count. Rate limit error handling.
+- [ ] **Summary view** — "⚑ Report incorrect summary" link above bottom buttons
+- [ ] **Simplify view** — "⚑ Report incorrect simplification" link above bottom buttons
+- [ ] **Feedback modal (detail)** — one field: describe what's wrong. Show char count. Rate limit error handling.
+
+### ✅ Checkpoint — Feedback module
+
+- [ ] `POST /api/v1/feedback` as signed-in — returns 200, row inserted in DB
+- [ ] Submit again for same `(user_id, blog_id, type)` — row updated, not duplicated
+- [ ] Empty field on card submit — no request sent for that type
+- [ ] Content < 10 chars — returns 422
+- [ ] Content > 500 chars — returns 422
+- [ ] Submit 2nd time within 1 minute — returns 429
+- [ ] Submit 6th time in a day — returns 429
+- [ ] As guest — returns 401
+- [ ] Report button visible on card for signed-in users, hidden for guests
+- [ ] Report link visible on summary and simplify pages
+
+---
+
 ### ✅ Checkpoint 9 — Frontend (full E2E)
 
 **As a guest:**

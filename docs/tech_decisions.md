@@ -66,6 +66,14 @@ enggsystemfeed/
 │   ├── simplify.py
 │   ├── prerequisites.py
 │   └── ingest.py
+├── feedback/
+│   ├── __init__.py
+│   ├── controller.py
+│   ├── dao.py
+│   ├── enums.py
+│   ├── schemas.py
+│   ├── service.py
+│   └── handler.py
 ```
 
 ---
@@ -119,7 +127,25 @@ enggsystemfeed/
 - JWT not required — `/docs` is a developer tool, not user-facing
 
 ## Rate Limiting
-- No rate limiting — all LLM-generated content (summary, simplify, prerequisites) is cached per article or topic and shared across all users. First request pays the LLM cost; all subsequent requests are served from cache.
+- No rate limiting on LLM-generated content (summary, simplify, prerequisites) — cached per article or topic and shared across all users. First request pays the LLM cost; all subsequent requests are served from cache.
+- **Feedback submissions** — two limits, both configurable:
+  - Per minute: `FEEDBACK_RATE_LIMIT_PER_MINUTE` (default: 1) — Redis key `feedback:{user_id}:minute:{minute}`, TTL 60s
+  - Per day: `FEEDBACK_RATE_LIMIT_PER_DAY` (default: 5) — Redis key `feedback:{user_id}:{date}`
+  - Returns 429 when either limit is exceeded.
+
+## Feedback
+
+- `feedback/` is a standalone module — `controller.py`, `handler.py`, `service.py`, `dao.py`, `schemas.py`
+- Feedback `type` is an enum: `tag`, `prerequisite`, `summary`, `simplify`
+- Unique constraint on `(user_id, blog_id, type)` — one feedback row per user per blog per type
+- A row is only inserted if `content` is non-empty after stripping whitespace
+- Card submit sends up to two separate requests (one for `tag`, one for `prerequisite`) — only for fields with content
+- Server-side validation: min 10 chars, max 500 chars
+- Rate limiting: two limits checked in handler before insert
+  - Per minute: Redis key `feedback:{user_id}:minute:{minute}`, TTL 60s, limit defined as `FEEDBACK_RATE_LIMIT_PER_MINUTE` in `constants.py` (default: 1)
+  - Per day: Redis key `feedback:{user_id}:{date}`, limit defined as `FEEDBACK_RATE_LIMIT_PER_DAY` in `constants.py` (default: 5)
+
+---
 
 ## Configuration
 
@@ -254,6 +280,7 @@ class ForbiddenError(Exception): ...      # Content tier check failed
 class NotFoundError(Exception): ...       # Record not found
 class RSSFeedError(Exception): ...        # RSS feed unavailable
 class LLMUnreachableError(Exception): ... # LLM call failed
+class RateLimitError(Exception): ...      # Rate limit exceeded
 ```
 
 **Layer responsibilities:**
@@ -271,6 +298,7 @@ class LLMUnreachableError(Exception): ... # LLM call failed
 | `NotFoundError` | 404 |
 | `RSSFeedError` | 502 |
 | `LLMUnreachableError` | 502 |
+| `RateLimitError` | 429 |
 
 ---
 

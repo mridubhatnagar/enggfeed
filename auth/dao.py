@@ -47,7 +47,6 @@ class UserDAO(IUserDAO):
             self.db.refresh(user)
             return user
         except Exception as exc:
-            self.db.rollback()
             raise DatabaseError(f"Failed to create user: {exc}") from exc
 
 

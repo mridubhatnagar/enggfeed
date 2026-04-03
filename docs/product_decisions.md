@@ -71,6 +71,17 @@ Signed-in users can additionally browse by topic tags, see prerequisite topics, 
 
 ---
 
+## User Feedback
+
+- Signed-in users only
+- **Card** — "⚑ Report incorrect tags, prerequisites" button below tags/prerequisites chips, above action buttons. Opens a modal with two optional fields: Suggested Tags and Suggested Prerequisites (comma-separated).
+- **Summary / Simplify pages** — "⚑ Report incorrect summary / simplification" link below content body, above bottom buttons. Opens a modal with one field: describe what's wrong.
+- A row is only submitted if the field has content — empty fields are skipped.
+- Rate limit: 5 submissions per user per day. Exceeding returns a message: "You've reached the feedback limit for today. Try again tomorrow."
+- Review is manual by admin — no auto-apply of suggestions.
+
+---
+
 ## Non-Signed-In Button Behavior
 - Summary and Simplify buttons visible but locked — on click: show "Sign in with Google" modal
 - Tags and prerequisites hidden from non-signed-in users

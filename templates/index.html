@@ -54,9 +54,6 @@
     <button class="flash-close" @click="flashMessage = ''" aria-label="Dismiss">&times;</button>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       FEED VIEW
-  ═══════════════════════════════════════════════════════════════ -->
   <div x-show="currentView === 'feed'" x-cloak>
 
     <!-- ─── Filter strip (sticky below navbar) ────────────────── -->
@@ -266,28 +263,38 @@
                     </div>
                   </template>
 
-                  <!-- Action buttons -->
-                  <div class="card-actions">
+                  <!-- Card footer: flag + action buttons -->
+                  <div class="card-footer">
 
-                    <!-- Summary button: hidden for LIMITED, locked for guests, active for signed-in -->
-                    <button x-show="blog.content_tier !== 'LIMITED' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to read summary">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      Summary
-                    </button>
-                    <button x-show="blog.content_tier !== 'LIMITED' && user" class="btn-card-action" @click="openSummary(blog.id)">
-                      Summary
+                    <!-- Flag button (signed-in, non-LIMITED only) -->
+                    <button class="btn-flag" x-show="user && blog.content_tier !== 'LIMITED'" :id="blog.id" onclick="openCardFeedbackModal(this.id)">
+                      &#9873; Report incorrect tags, prerequisites
                     </button>
 
-                    <!-- Simplify button: FULL tier only, locked for guests, hidden for Partial -->
-                    <button x-show="blog.content_tier === 'FULL' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to simplify">
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                      Simplify
-                    </button>
-                    <button x-show="blog.content_tier === 'FULL' && user" class="btn-card-action" @click="openSimplify(blog.id)">
-                      Simplify
-                    </button>
+                    <!-- Action buttons -->
+                    <div class="card-actions">
 
-                  </div><!-- /card-actions -->
+                      <!-- Summary button: hidden for LIMITED, locked for guests, active for signed-in -->
+                      <button x-show="blog.content_tier !== 'LIMITED' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to read summary">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Summary
+                      </button>
+                      <button x-show="blog.content_tier !== 'LIMITED' && user" class="btn-card-action" @click="openSummary(blog.id)">
+                        Summary
+                      </button>
+
+                      <!-- Simplify button: FULL tier only, locked for guests, hidden for Partial -->
+                      <button x-show="blog.content_tier === 'FULL' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to simplify">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        Simplify
+                      </button>
+                      <button x-show="blog.content_tier === 'FULL' && user" class="btn-card-action" @click="openSimplify(blog.id)">
+                        Simplify
+                      </button>
+
+                    </div><!-- /card-actions -->
+
+                  </div><!-- /card-footer -->
 
                 </div><!-- /card-body -->
               </article><!-- /card -->
@@ -309,9 +316,6 @@
   </div><!-- /feed view -->
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SUMMARY VIEW
-  ═══════════════════════════════════════════════════════════════ -->
   <div x-show="currentView === 'summary'" x-cloak>
     <div class="detail-page">
 
@@ -407,6 +411,11 @@
             </div>
           </div>
 
+          <!-- Report link -->
+          <button class="btn-report" @click="openDetailFeedbackModal(currentBlogId, 'summary')">
+            &#9873; Report incorrect summary
+          </button>
+
           <!-- Bottom buttons: Back | Read Original | Simplify (hidden for Partial) -->
           <div class="detail-actions">
             <button class="btn-back" @click="goFeed()">&larr; Back</button>
@@ -425,9 +434,6 @@
   </div><!-- /summary view -->
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SIMPLIFY VIEW
-  ═══════════════════════════════════════════════════════════════ -->
   <div x-show="currentView === 'simplify'" x-cloak>
     <div class="detail-page">
 
@@ -512,6 +518,11 @@
             </div>
           </div>
 
+          <!-- Report link -->
+          <button class="btn-report" @click="openDetailFeedbackModal(currentBlogId, 'simplify')">
+            &#9873; Report incorrect simplification
+          </button>
+
           <!-- Bottom buttons: Back | Read Original | Summary -->
           <div class="detail-actions">
             <button class="btn-back" @click="goFeed()">&larr; Back</button>
@@ -527,9 +538,6 @@
   </div><!-- /simplify view -->
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       PREREQUISITES MODAL
-  ═══════════════════════════════════════════════════════════════ -->
   <div
     class="modal-backdrop"
     x-show="showPrereqModal"
@@ -595,9 +603,78 @@
   </div><!-- /prereq modal -->
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       SIGN IN MODAL
-  ═══════════════════════════════════════════════════════════════ -->
+  <div
+    class="modal-backdrop"
+    x-show="showFeedbackModal"
+    x-cloak
+    @click.self="showFeedbackModal = false"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Submit feedback"
+  >
+    <div class="modal-box feedback-modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" x-text="feedbackMode === 'card' ? 'Flag incorrect tags or prerequisites' : (feedbackDetailType === 'summary' ? 'Report incorrect summary' : 'Report incorrect simplification')"></h2>
+        <button class="modal-close" @click="showFeedbackModal = false" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="feedback-subtitle" x-text="feedbackMode === 'card' ? 'Help us improve — let us know what\'s wrong and suggest better ones.' : 'What\'s incorrect about this content?'"></p>
+
+        <!-- Card mode: 2 fields -->
+        <template x-if="feedbackMode === 'card'">
+          <div>
+            <div class="feedback-field">
+              <label class="feedback-label">Suggested Tags</label>
+              <textarea class="feedback-textarea" x-model="feedbackTagText" placeholder="e.g. networking, anycast, cdn" maxlength="500"></textarea>
+              <div class="feedback-hint">Comma-separated. Leave blank if tags are fine.</div>
+              <div class="feedback-char-count" x-text="feedbackTagText.length + ' / 500'"></div>
+            </div>
+            <div class="feedback-field">
+              <label class="feedback-label">Suggested Prerequisites</label>
+              <textarea class="feedback-textarea" x-model="feedbackPrereqText" placeholder="e.g. BGP, DNS, TCP/IP" maxlength="500"></textarea>
+              <div class="feedback-hint">Comma-separated. Leave blank if prerequisites are fine.</div>
+              <div class="feedback-char-count" x-text="feedbackPrereqText.length + ' / 500'"></div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Detail mode: 1 field -->
+        <template x-if="feedbackMode === 'detail'">
+          <div class="feedback-field">
+            <label class="feedback-label">Your feedback</label>
+            <textarea class="feedback-textarea" x-model="feedbackDetailText" placeholder="Describe what's wrong..." maxlength="500"></textarea>
+            <div class="feedback-char-count" x-text="feedbackDetailText.length + ' / 500'"></div>
+          </div>
+        </template>
+
+        <button class="btn-feedback-submit" @click="submitFeedback()" :disabled="feedbackSubmitting" x-text="feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'"></button>
+      </div>
+    </div>
+  </div><!-- /feedback modal -->
+
+
+  <div
+    class="modal-backdrop"
+    x-show="showFeedbackSuccess"
+    x-cloak
+    @click.self="showFeedbackSuccess = false"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Feedback submitted"
+  >
+    <div class="modal-box feedback-modal-box" style="text-align: center;">
+      <div class="modal-header" style="justify-content: flex-end; padding-bottom: 0;">
+        <button class="modal-close" @click="showFeedbackSuccess = false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 8px;">
+        <div style="font-size: 2rem; margin-bottom: 12px;">&#10003;</div>
+        <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Thank you for your feedback.</div>
+        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 20px;">This will help us improve our system.</div>
+        <button class="btn-feedback-submit" @click="showFeedbackSuccess = false">Done</button>
+      </div>
+    </div>
+  </div>
+
   <div
     class="modal-backdrop"
     x-show="showSigninModal"
@@ -637,9 +714,6 @@
   </div><!-- /signin modal -->
 
 
-  <!-- ═══════════════════════════════════════════════════════════════
-       Alpine.js Application Logic
-  ═══════════════════════════════════════════════════════════════ -->
   <script src="/static/js/app.js"></script>
 
 </body>
