@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Column, DateTime, ForeignKey, String, Text, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
@@ -15,7 +15,7 @@ class Feedback(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("user.user_id"), nullable=False)
     type = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(tz=timezone.utc), nullable=False)
 
     __table_args__ = (
         UniqueConstraint("user_id", "blog_id", "type", name="uq_feedback_user_blog_type"),
