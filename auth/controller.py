@@ -3,15 +3,14 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from auth.client import AuthClient
-from auth.dao import AllowedUserDAO, UserDAO
+from auth.dao import UserDAO
 from auth.handler import AuthHandler
 from auth.schemas import UserDetail
-from auth.service import AllowedUserService, UserService
+from auth.service import UserService
 from database import get_db
 from exceptions import (
     AuthError,
     DatabaseError,
-    NotAllowedError,
     NotFoundError,
     UnauthorizedError,
 )
@@ -22,14 +21,11 @@ router = APIRouter(tags=["auth"])
 
 def get_auth_handler(db: Session = Depends(get_db)) -> AuthHandler:
     user_dao = UserDAO(db)
-    allowed_dao = AllowedUserDAO(db)
     user_service = UserService(user_dao)
-    allowed_service = AllowedUserService(allowed_dao)
     auth_client = AuthClient()
     return AuthHandler(
         auth_client=auth_client,
         user_service=user_service,
-        allowed_user_service=allowed_service,
     )
 
 
@@ -63,8 +59,6 @@ async def callback(
         redirect = RedirectResponse(url="/")
         handler.callback(code, state, request, redirect)
         return redirect
-    except NotAllowedError:
-        return RedirectResponse(url="/?error=not_allowed")
     except AuthError:
         return RedirectResponse(url="/?error=auth_failed")
     except DatabaseError:

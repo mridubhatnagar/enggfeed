@@ -16,9 +16,3 @@ class User(Base):
     email = Column(Text, nullable=False)
     profile_url = Column(Text, nullable=False)
 
-
-class AllowedUser(Base):
-    __tablename__ = "allowed_users"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    email = Column(Text, nullable=False)

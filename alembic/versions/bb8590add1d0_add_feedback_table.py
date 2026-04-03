@@ -17,10 +17,10 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.create_foreign_key(None, 'feedback', 'blog', ['blog_id'], ['id'])
-    op.create_foreign_key(None, 'feedback', 'user', ['user_id'], ['user_id'])
+    op.create_foreign_key('feedback_blog_id_fkey', 'feedback', 'blog', ['blog_id'], ['id'])
+    op.create_foreign_key('feedback_user_id_fkey', 'feedback', 'user', ['user_id'], ['user_id'])
 
 
 def downgrade() -> None:
-    op.drop_constraint(None, 'feedback', type_='foreignkey')
-    op.drop_constraint(None, 'feedback', type_='foreignkey')
+    op.drop_constraint('feedback_user_id_fkey', 'feedback', type_='foreignkey')
+    op.drop_constraint('feedback_blog_id_fkey', 'feedback', type_='foreignkey')

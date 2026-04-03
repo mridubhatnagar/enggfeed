@@ -4,9 +4,9 @@ from fastapi import Request, Response
 
 from auth.client import AuthClient
 from auth.schemas import UserDetail
-from auth.service import AllowedUserService, UserService
+from auth.service import UserService
 from auth.utils import decode_jwt_token, generate_jwt_token
-from exceptions import AuthError, NotAllowedError, NotFoundError, UnauthorizedError
+from exceptions import AuthError, NotFoundError, UnauthorizedError
 
 _STATE_COOKIE = "oauth_state"
 _JWT_COOKIE = "access_token"
@@ -17,11 +17,9 @@ class AuthHandler:
         self,
         auth_client: AuthClient,
         user_service: UserService,
-        allowed_user_service: AllowedUserService,
     ) -> None:
         self.auth_client = auth_client
         self.user_service = user_service
-        self.allowed_user_service = allowed_user_service
 
     def initiate(self, response: Response) -> str:
         """Generate a state token, store it in an httpOnly cookie, and return the
@@ -51,10 +49,6 @@ class AuthHandler:
         google_auth_id: str = claims.get("sub", "")
         name: str = claims.get("name", "")
         profile_url: str = claims.get("picture", "")
-
-        allowed = self.allowed_user_service.get_allowed_user_by_email(email)
-        if allowed is None:
-            raise NotAllowedError("Email is not in the allowed list")
 
         user = self.user_service.get_user_by_auth_id(google_auth_id)
         if user is None:

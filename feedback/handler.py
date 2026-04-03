@@ -14,6 +14,7 @@ from database import cache
 from exceptions import FeedbackError, RateLimitError, UnauthorizedError, ValidationError
 from feedback.enums import FeedbackType
 from feedback.service import FeedbackService
+from schemas import APIResponse
 
 
 class FeedbackHandler:
@@ -22,7 +23,7 @@ class FeedbackHandler:
 
     def submit_feedback(
         self, blog_id: uuid.UUID, type: FeedbackType, content: str, request: Request
-    ) -> None:
+    ) -> APIResponse:
         token = request.cookies.get("access_token")
         if not token:
             raise UnauthorizedError("Authentication required")
@@ -51,7 +52,7 @@ class FeedbackHandler:
 
         content = content.strip()
         if not content:
-            return
+            return APIResponse(success=True, data=None, error=None)
 
         if len(content) < FEEDBACK_MIN_LENGTH or len(content) > FEEDBACK_MAX_LENGTH:
             raise ValidationError(
@@ -59,3 +60,4 @@ class FeedbackHandler:
             )
 
         self.feedback_service.create_or_update(user_id, blog_id, type, content)
+        return APIResponse(success=True, data=None, error=None)
