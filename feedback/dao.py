@@ -15,7 +15,7 @@ class IFeedbackDAO(ABC):
     def create(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
 
     @abstractmethod
-    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+    def update(self, feedback: Feedback, content: str): ...
 
 
 class FeedbackDAO(IFeedbackDAO):
@@ -46,17 +46,8 @@ class FeedbackDAO(IFeedbackDAO):
         except Exception as exc:
             raise DatabaseError(f"Failed to create feedback: {exc}") from exc
 
-    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str) -> Feedback:
+    def update(self, feedback: Feedback, content: str) -> Feedback:
         try:
-            feedback = (
-                self.db.query(Feedback)
-                .filter(
-                    Feedback.user_id == user_id,
-                    Feedback.blog_id == blog_id,
-                    Feedback.type == type,
-                )
-                .first()
-            )
             feedback.content = content
             self.db.commit()
             self.db.refresh(feedback)
