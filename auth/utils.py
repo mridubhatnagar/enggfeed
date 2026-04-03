@@ -22,3 +22,14 @@ def decode_jwt_token(token: str) -> dict:
         return jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
     except JWTError as exc:
         raise UnauthorizedError(f"Invalid or expired token: {exc}") from exc
+
+
+def is_authenticated(token: str | None) -> bool:
+    """Return True if the token is present and valid, False otherwise."""
+    if not token:
+        return False
+    try:
+        decode_jwt_token(token)
+        return True
+    except UnauthorizedError:
+        return False

@@ -20,17 +20,18 @@ def get_feedback_handler(db: Session = Depends(get_db)) -> FeedbackHandler:
 
 
 @router.post("/api/v1/feedback")
-async def submit_feedback(
+def submit_feedback(
     body: FeedbackRequest,
     request: Request,
     handler: FeedbackHandler = Depends(get_feedback_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
         return handler.submit_feedback(
             blog_id=body.blog_id,
             type=body.type,
             content=body.content,
-            request=request,
+            token=token,
         )
     except UnauthorizedError as exc:
         return APIResponse(

@@ -40,13 +40,15 @@ def get_summary_handler(db: Session = Depends(get_db)) -> SummaryHandler:
 
 
 @router.get("/api/v1/blogs/{blog_id}/summary")
-async def get_summary(
+def get_summary(
     blog_id: str,
     request: Request,
     handler: SummaryHandler = Depends(get_summary_handler),
 ):
+    token = request.cookies.get("access_token")
     try:
-        return handler.get_summary(blog_id=blog_id, request=request)
+        result = handler.get_summary(blog_id=blog_id, token=token)
+        return APIResponse(success=True, data=result, error=None)
     except UnauthorizedError as exc:
         return APIResponse(
             success=False,
