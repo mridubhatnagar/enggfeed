@@ -1,6 +1,6 @@
 import uuid
 
-from auth.dao import IAllowedUserDAO, IUserDAO
+from auth.dao import IUserDAO
 
 
 class UserService:
@@ -16,10 +16,3 @@ class UserService:
     def create_user(self, google_auth_id: str, name: str, email: str, profile_url: str):
         return self.dao.create(google_auth_id, name, email, profile_url)
 
-
-class AllowedUserService:
-    def __init__(self, dao: IAllowedUserDAO) -> None:
-        self.dao = dao
-
-    def get_allowed_user_by_email(self, email: str):
-        return self.dao.get_by_email(email)

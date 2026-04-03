@@ -5,7 +5,6 @@
 | Class | Module | File |
 |-------|--------|------|
 | UserDAO, UserService | auth/ | dao.py, service.py |
-| AllowedUserDAO, AllowedUserService | auth/ | dao.py, service.py |
 | BlogDAO, BlogService | blog/ | dao.py, service.py |
 | BlogSourceDAO, BlogSourceService | blog/ | dao.py, service.py |
 | SummaryDAO, SummaryService | summary/ | dao.py, service.py |
@@ -47,21 +46,6 @@ class UserDAO(IUserDAO):
 
 ---
 
-### AllowedUser
-
-```python
-class IAllowedUserDAO(ABC):
-    @abstractmethod
-    def get_by_email(self, email: str): ...
-
-
-class AllowedUserDAO(IAllowedUserDAO):
-    def __init__(self, db: Session): ...
-    def get_by_email(self, email: str): ...
-
-```
-
----
 
 ### BlogSource
 
@@ -327,14 +311,6 @@ class UserService:
 ```
 
 ---
-
-### AllowedUser
-
-```python
-class AllowedUserService:
-    def __init__(self, dao: IAllowedUserDAO): ...
-    def get_allowed_user_by_email(self, email: str): ...
-```
 
 ---
 

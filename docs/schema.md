@@ -15,16 +15,6 @@
 
 ---
 
-### allowed_users
-| Column | Type |
-|--------|------|
-| id | uuid (PK) |
-| email | text |
-
-**Reasoning:** Product is not open to all. Only users whose email is in `allowed_users` can access the platform. An email can exist in `allowed_users` without the person being a registered user — so there is no relationship between `allowed_users` and `user`. At login time: Google authentication happens first, then email is checked against `allowed_users`. If not present, the user is rejected.
-
----
-
 ### blog_source
 | Column | Type |
 |--------|------|
@@ -222,11 +212,6 @@ erDiagram
         name text
         email text
         profile_url text
-    }
-
-    allowed_users {
-        id uuid PK
-        email text
     }
 
     feedback {

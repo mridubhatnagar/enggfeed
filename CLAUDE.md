@@ -108,7 +108,7 @@ enggsystemfeed/
 
 | Module | Responsible for |
 |--------|----------------|
-| `auth/` | Google OAuth flow, state token verification, allowlist check, JWT issuance and validation |
+| `auth/` | Google OAuth flow, state token verification, JWT issuance and validation |
 | `blog/` | Blog listing, filtering by source and tag, pagination. Also owns `BlogSource` DAO and Service |
 | `summary/` | On-demand summary generation, 7-day refresh logic, cache management via `@cache.cached` |
 | `simplify/` | ELI5 generation, 7-day refresh logic, cache management |
