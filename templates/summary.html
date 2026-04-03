@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EnggFeed</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body
+  x-data="summaryPage()"
+  x-init="_init()"
+  @keydown.escape.window="handleEsc()"
+>
+
+  <nav class="navbar">
+    <a class="navbar-logo" href="/">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="3" y="3" width="7" height="7" rx="1"/>
+        <rect x="14" y="3" width="7" height="7" rx="1"/>
+        <rect x="3" y="14" width="7" height="7" rx="1"/>
+        <rect x="14" y="14" width="7" height="7" rx="1"/>
+      </svg>
+      EnggFeed
+    </a>
+
+    <div class="navbar-spacer"></div>
+
+    <!-- Signed-in state -->
+    <template x-if="user">
+      <div class="navbar-user">
+        <div class="avatar">
+          <template x-if="user.profile_url">
+            <img :src="user.profile_url" :alt="user.name" @error="$event.target.style.display='none'" />
+          </template>
+          <span x-show="!user.profile_url" x-text="initials(user.name)"></span>
+        </div>
+        <span class="navbar-name" x-text="user.name"></span>
+        <button class="btn-signout" @click="signOut()">Sign Out</button>
+      </div>
+    </template>
+  </nav>
+
+  <!-- Flash message bar -->
+  <div x-show="flashMessage" x-cloak class="flash-bar" role="alert">
+    <span x-text="flashMessage"></span>
+    <button class="flash-close" @click="flashMessage = ''" aria-label="Dismiss">&times;</button>
+  </div>
+
+  <div class="detail-page">
+
+    <!-- Loading spinner -->
+    <div class="spinner-wrap" x-show="detailLoading" x-cloak>
+      <div class="spinner"></div>
+    </div>
+
+    <!-- Content -->
+    <template x-if="!detailLoading && summaryDetail">
+      <div>
+        <!-- Thumbnail -->
+        <div class="detail-thumb-wrap">
+          <template x-if="summaryDetail?.blog?.thumbnail">
+            <img class="detail-thumb" :src="summaryDetail?.blog?.thumbnail" :alt="summaryDetail?.blog?.title" />
+          </template>
+          <template x-if="!summaryDetail?.blog?.thumbnail">
+            <div class="detail-thumb-placeholder">
+              <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" aria-hidden="true">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+            </div>
+          </template>
+        </div>
+
+        <!-- Attribution line -->
+        <p class="detail-attribution">
+          Original blog is by <strong x-text="summaryDetail?.blog?.source"></strong>.
+          You are seeing an AI generated summary of the original blog.
+        </p>
+
+        <!-- Title -->
+        <h1 class="detail-title" x-text="summaryDetail?.blog?.title"></h1>
+
+        <!-- Published date -->
+        <p class="detail-published" x-text="'Published on ' + formatDate(summaryDetail?.blog?.published_at)"></p>
+
+        <!-- Prerequisites (all shown, no truncation) -->
+        <template x-if="summaryDetail?.blog?.prerequisites && summaryDetail?.blog?.prerequisites.length > 0">
+          <div class="detail-chips-section">
+            <div class="detail-chips-label">Prerequisites</div>
+            <div class="chips-row">
+              <template x-for="prereq in summaryDetail?.blog?.prerequisites" :key="prereq">
+                <button class="chip chip-prereq" @click="openPrereqModal(prereq)" x-text="prereq"></button>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <!-- Tags (all shown, clickable → navigates back to feed filtered by tag) -->
+        <template x-if="summaryDetail?.blog?.tags && summaryDetail?.blog?.tags.length > 0">
+          <div class="detail-chips-section">
+            <div class="detail-chips-label">Tags</div>
+            <div class="chips-row">
+              <template x-for="tag in summaryDetail?.blog?.tags" :key="tag">
+                <button class="chip chip-tag" @click="window.location.href = '/?tag=' + encodeURIComponent(tag)" x-text="tag"></button>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <hr class="detail-divider" />
+
+        <!-- Generated summary content -->
+        <div class="detail-content">
+          <!-- short_summary: only rendered if non-empty -->
+          <template x-if="summaryDetail?.summary?.short_summary">
+            <p class="detail-short-summary" x-text="summaryDetail?.summary?.short_summary"></p>
+          </template>
+          <!-- key_points: only rendered if non-empty array -->
+          <template x-if="summaryDetail?.summary?.key_points && summaryDetail?.summary?.key_points.length > 0">
+            <div>
+              <div class="detail-key-points-label">Key Points</div>
+              <ul class="detail-key-points">
+                <template x-for="point in summaryDetail?.summary?.key_points" :key="point">
+                  <li x-text="point"></li>
+                </template>
+              </ul>
+            </div>
+          </template>
+        </div>
+
+        <!-- Ad slot (between content and bottom buttons) -->
+        <div class="detail-ad">
+          <div class="ad-unit">
+            <div class="ad-body">
+              <div class="ad-headline">Know an engineer who'd love this?</div>
+              <div class="ad-description">One feed for every major engineering blog. Browse by topic or company, get AI summaries, ELI5 explanations, and prerequisites. Everything you need to stay sharp.</div>
+            </div>
+            <a class="ad-cta" href="#" @click.prevent="copyUrl(summaryDetail?.blog?.link || window.location.href)" x-text="copied ? 'Copied!' : 'Share'"></a>
+          </div>
+        </div>
+
+        <!-- Report link -->
+        <button class="btn-report" @click="openDetailFeedbackModal(blogId, 'summary')">
+          &#9873; Report incorrect summary
+        </button>
+
+        <!-- Bottom buttons: Back | Read Original | Simplify (hidden for Partial) -->
+        <div class="detail-actions">
+          <button class="btn-back" @click="history.back()">&larr; Back</button>
+          <a class="btn-read-original" :href="summaryDetail?.blog?.link" target="_blank" rel="noopener noreferrer">
+            Read Original &#8599;
+          </a>
+          <!-- Simplify hidden for Partial tier (only shown for Full) -->
+          <template x-if="summaryDetail?.blog?.content_tier === 'FULL'">
+            <button class="btn-switch-mode" @click="window.location.href = '/simplify/' + blogId">Simplify</button>
+          </template>
+        </div>
+      </div>
+    </template>
+
+  </div>
+
+
+  <div
+    class="modal-backdrop"
+    x-show="showPrereqModal"
+    x-cloak
+    @click.self="showPrereqModal = false"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="prereqTopic"
+  >
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" x-text="prereqTopic"></h2>
+        <button class="modal-close" @click="showPrereqModal = false" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+
+        <!-- Loading spinner -->
+        <div class="spinner-wrap" x-show="prereqLoading" x-cloak style="padding: 32px 0;">
+          <div class="spinner"></div>
+        </div>
+
+        <!-- Content (Primer by default; Deep dive revealed on Read more) -->
+        <template x-if="!prereqLoading && prereqDetail">
+          <div>
+            <!-- Definition (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.definition">
+              <p class="prereq-definition" x-text="prereqDetail?.primer?.definition"></p>
+            </template>
+
+            <!-- Why it matters (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.why_it_matters">
+              <div class="prereq-block">
+                <div class="prereq-block-label">Why it matters</div>
+                <p class="prereq-block-text" x-text="prereqDetail?.primer?.why_it_matters"></p>
+              </div>
+            </template>
+
+            <!-- Example (only if non-empty) -->
+            <template x-if="prereqDetail?.primer?.example">
+              <div class="prereq-block">
+                <div class="prereq-block-label">Example</div>
+                <p class="prereq-block-text" x-text="prereqDetail?.primer?.example"></p>
+              </div>
+            </template>
+
+            <!-- "Read more" button — only shown if deep_dive exists and not yet expanded -->
+            <template x-if="prereqDetail?.deep_dive && !prereqShowDeepDive">
+              <button class="btn-read-more" @click="prereqShowDeepDive = true">Read more</button>
+            </template>
+
+            <!-- Deep dive section (revealed after Read more) -->
+            <template x-if="prereqDetail?.deep_dive && prereqShowDeepDive">
+              <div class="prereq-deep-dive">
+                <div class="prereq-deep-label">Deep Dive</div>
+                <p class="prereq-deep-text" x-text="prereqDetail.deep_dive"></p>
+              </div>
+            </template>
+          </div>
+        </template>
+
+      </div>
+    </div>
+  </div><!-- /prereq modal -->
+
+
+  <div
+    class="modal-backdrop"
+    x-show="showFeedbackModal"
+    x-cloak
+    @click.self="showFeedbackModal = false"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Submit feedback"
+  >
+    <div class="modal-box feedback-modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title">Report incorrect summary</h2>
+        <button class="modal-close" @click="showFeedbackModal = false" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="feedback-subtitle">What's incorrect about this content?</p>
+
+        <div class="feedback-field">
+          <label class="feedback-label">Your feedback</label>
+          <textarea class="feedback-textarea" x-model="feedbackDetailText" placeholder="Describe what's wrong..." maxlength="500"></textarea>
+          <div class="feedback-char-count" x-text="feedbackDetailText.length + ' / 500'"></div>
+        </div>
+
+        <button class="btn-feedback-submit" @click="submitFeedback()" :disabled="feedbackSubmitting" x-text="feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'"></button>
+      </div>
+    </div>
+  </div><!-- /feedback modal -->
+
+
+  <div
+    class="modal-backdrop"
+    x-show="showFeedbackSuccess"
+    x-cloak
+    @click.self="showFeedbackSuccess = false"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Feedback submitted"
+  >
+    <div class="modal-box feedback-modal-box" style="text-align: center;">
+      <div class="modal-header" style="justify-content: flex-end; padding-bottom: 0;">
+        <button class="modal-close" @click="showFeedbackSuccess = false" aria-label="Close">&times;</button>
+      </div>
+      <div class="modal-body" style="padding-top: 8px;">
+        <div style="font-size: 2rem; margin-bottom: 12px;">&#10003;</div>
+        <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 8px;">Thank you for your feedback.</div>
+        <div style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 20px;">This will help us improve our system.</div>
+        <button class="btn-feedback-submit" @click="showFeedbackSuccess = false">Done</button>
+      </div>
+    </div>
+  </div>
+
+
+  <script>
+    function summaryPage() {
+      return {
+
+        // Auth
+        user: null,
+
+        // Flash message
+        flashMessage: '',
+
+        // Detail state
+        blogId: null,
+        summaryDetail: null,
+        detailLoading: true,
+
+        // Prerequisites modal
+        showPrereqModal: false,
+        prereqLoading: false,
+        prereqTopic: '',
+        prereqDetail: null,
+        prereqShowDeepDive: false,
+
+        // Feedback modal
+        showFeedbackModal: false,
+        showFeedbackSuccess: false,
+        feedbackBlogId: null,
+        feedbackDetailType: null,
+        feedbackDetailText: '',
+        feedbackSubmitting: false,
+
+        // Share / copy feedback
+        copied: false,
+
+        async _init() {
+          const parts = window.location.pathname.split('/');
+          this.blogId = decodeURIComponent(parts[parts.length - 1]);
+          await Promise.all([this._fetchUser(), this._load()]);
+        },
+
+        async _fetchUser() {
+          try {
+            const res = await fetch('/auth/me', { credentials: 'include' });
+            if (res.ok) {
+              const json = await res.json();
+              if (json.success && json.data) this.user = json.data;
+            }
+          } catch (_) {}
+        },
+
+        async _load() {
+          this.detailLoading = true;
+          try {
+            const res  = await fetch(`/api/v1/blogs/${encodeURIComponent(this.blogId)}/summary`, { credentials: 'include' });
+            const json = await res.json();
+            if (json.success && json.data) {
+              this.summaryDetail = json.data;
+            } else if (res.status === 401) {
+              window.location.href = '/';
+            } else {
+              this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
+              setTimeout(() => { this.flashMessage = ''; }, 6000);
+            }
+          } catch (_) {
+            this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
+            setTimeout(() => { this.flashMessage = ''; }, 6000);
+          } finally {
+            this.detailLoading = false;
+          }
+        },
+
+        async signOut() {
+          try {
+            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
+          } catch (_) {}
+          window.location.href = '/';
+        },
+
+        initials(name) {
+          if (!name) return '?';
+          return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+        },
+
+        async openPrereqModal(topicName) {
+          this.prereqTopic        = topicName;
+          this.prereqDetail       = null;
+          this.prereqShowDeepDive = false;
+          this.prereqLoading      = true;
+          this.showPrereqModal    = true;
+          try {
+            const res  = await fetch(`/api/v1/prerequisites/${encodeURIComponent(topicName)}`, { credentials: 'include' });
+            const json = await res.json();
+            if (json.success && json.data) {
+              this.prereqDetail = json.data;
+            }
+          } catch (_) {}
+          finally {
+            this.prereqLoading = false;
+          }
+        },
+
+        openDetailFeedbackModal(blogId, type) {
+          this.feedbackBlogId     = blogId;
+          this.feedbackDetailType = type;
+          this.feedbackDetailText = '';
+          this.showFeedbackModal  = true;
+        },
+
+        async submitFeedback() {
+          if (this.feedbackSubmitting) return;
+          this.feedbackSubmitting = true;
+          try {
+            const result = await this._postFeedback(this.feedbackBlogId, this.feedbackDetailType, this.feedbackDetailText.trim());
+            if (!result.success) { this._showFeedbackError(result); return; }
+            this.showFeedbackModal   = false;
+            this.showFeedbackSuccess = true;
+          } finally {
+            this.feedbackSubmitting = false;
+          }
+        },
+
+        async _postFeedback(blogId, type, content) {
+          try {
+            const res = await fetch('/api/v1/feedback', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ blog_id: blogId, type, content }),
+            });
+            return await res.json();
+          } catch (_) {
+            return { success: false, error: { code: 500, message: 'Network error. Please try again.' } };
+          }
+        },
+
+        _showFeedbackError(result) {
+          this.showFeedbackModal = false;
+          const code = result?.error?.code;
+          if (code === 429) {
+            this.flashMessage = "You've reached your feedback limit. Please try again later.";
+          } else if (code === 422) {
+            this.flashMessage = result?.error?.message || 'Feedback must be between 10 and 500 characters.';
+          } else {
+            this.flashMessage = 'Failed to submit feedback. Please try again.';
+          }
+          setTimeout(() => { this.flashMessage = ''; }, 6000);
+        },
+
+        handleEsc() {
+          if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
+          if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
+          if (this.showPrereqModal)     { this.showPrereqModal     = false; return; }
+        },
+
+        copyUrl(url) {
+          navigator.clipboard.writeText(url).then(() => {
+            this.copied = true;
+            setTimeout(() => { this.copied = false; }, 2000);
+          });
+        },
+
+        formatDate(isoString) {
+          if (!isoString) return '';
+          try {
+            return new Date(isoString).toLocaleDateString('en-US', {
+              year: 'numeric', month: 'long', day: 'numeric',
+            });
+          } catch (_) {
+            return isoString;
+          }
+        },
+
+      };
+    }
+  </script>
+
+</body>
+</html>

@@ -1,16 +1,9 @@
     function app() {
       return {
 
-        // ── Auth ────────────────────────────────────────────────
         user: null,
-
-        // ── View state: 'feed' | 'summary' | 'simplify' ────────
-        currentView: 'feed',
-
-        // ── Flash message ───────────────────────────────────────
         flashMessage: '',
 
-        // ── Feed state ──────────────────────────────────────────
         feedLoading: false,
         scrollLoading: false,
         blogs: [],          // array of { id, ...BlogItem } from /api/v1/blogs
@@ -24,23 +17,14 @@
         allLoaded: false,
         pageSize: 12,
 
-        // ── Detail (summary / simplify) ─────────────────────────
-        detailLoading: false,
-        currentBlogId: null,
-        summaryDetail: null,   // SummaryDetail from /api/v1/blogs/{id}/summary
-        simplifyDetail: null,  // SimplifyDetail from /api/v1/blogs/{id}/simplify
-
-        // ── Prerequisites modal ─────────────────────────────────
         showPrereqModal: false,
         prereqLoading: false,
         prereqTopic: '',
         prereqDetail: null,        // PrerequisiteDetail from /api/v1/prerequisites/{topic}
         prereqShowDeepDive: false,
 
-        // ── Sign In modal ───────────────────────────────────────
         showSigninModal: false,
 
-        // ── Feedback modal ──────────────────────────────────────
         showFeedbackSuccess: false,
         showFeedbackModal: false,
         feedbackBlogId: null,
@@ -51,12 +35,8 @@
         feedbackDetailText: '',
         feedbackSubmitting: false,
 
-        // ── Share / copy feedback ───────────────────────────────
         copied: false,
 
-        // ────────────────────────────────────────────────────────
-        // Initialisation
-        // ────────────────────────────────────────────────────────
         async _init() {
           // Read URL params first so bookmarked/shared URLs restore correctly
           this._readUrlParams();
@@ -75,9 +55,6 @@
           this._initInfiniteScroll();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Auth
-        // ────────────────────────────────────────────────────────
         async _fetchUser() {
           try {
             const res = await fetch('/auth/me', { credentials: 'include' });
@@ -98,7 +75,6 @@
             await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
           } catch (_) {}
           this.user = null;
-          this.goFeed();
           // Re-fetch so tags/prereqs disappear from cards immediately
           await this._fetchBlogs();
         },
@@ -108,9 +84,6 @@
           return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Sources
-        // ────────────────────────────────────────────────────────
         async _fetchSources() {
           try {
             const res = await fetch('/api/v1/sources');
@@ -121,9 +94,6 @@
           } catch (_) {}
         },
 
-        // ────────────────────────────────────────────────────────
-        // Tags
-        // ────────────────────────────────────────────────────────
         async _fetchTags() {
           try {
             const res = await fetch('/api/v1/tags');
@@ -153,9 +123,6 @@
           return map[sourceName] || (sourceName.toLowerCase().replace(/\s+/g, '') + '.com');
         },
 
-        // ────────────────────────────────────────────────────────
-        // Feed / blog listing
-        // ────────────────────────────────────────────────────────
         async _fetchBlogs() {
           this.blogs = [];
           this.currentPage = 1;
@@ -243,12 +210,6 @@
           this._fetchBlogs();
         },
 
-        filterByTagFromDetail(tag) {
-          // Navigate back to feed then apply tag filter
-          this.goFeed();
-          this.$nextTick(() => this.filterByTag(tag));
-        },
-
         clearFilters() {
           this.activeSources = [];
           this.activeTags    = [];
@@ -256,66 +217,6 @@
           this._fetchBlogs();
         },
 
-        // ────────────────────────────────────────────────────────
-        // Summary page
-        // ────────────────────────────────────────────────────────
-        async openSummary(blogId) {
-          this.currentBlogId  = blogId;
-          this.summaryDetail  = null;
-          this.currentView    = 'summary';
-          this.detailLoading  = true;
-          window.scrollTo({ top: 0, behavior: 'instant' });
-          history.pushState({ view: 'summary', blogId }, '', `/summary/${encodeURIComponent(blogId)}`);
-          try {
-            const res  = await fetch(`/api/v1/blogs/${encodeURIComponent(blogId)}/summary`, { credentials: 'include' });
-            const json = await res.json();
-            if (json.success && json.data) {
-              this.summaryDetail = json.data;
-            } else {
-              this._handleDetailError();
-            }
-          } catch (_) {
-            this._handleDetailError();
-          } finally {
-            this.detailLoading = false;
-          }
-        },
-
-        // ────────────────────────────────────────────────────────
-        // Simplify page
-        // ────────────────────────────────────────────────────────
-        async openSimplify(blogId) {
-          this.currentBlogId  = blogId;
-          this.simplifyDetail = null;
-          this.currentView    = 'simplify';
-          this.detailLoading  = true;
-          window.scrollTo({ top: 0, behavior: 'instant' });
-          history.pushState({ view: 'simplify', blogId }, '', `/simplify/${encodeURIComponent(blogId)}`);
-          try {
-            const res  = await fetch(`/api/v1/blogs/${encodeURIComponent(blogId)}/simplify`, { credentials: 'include' });
-            const json = await res.json();
-            if (json.success && json.data) {
-              this.simplifyDetail = json.data;
-            } else {
-              this._handleDetailError();
-            }
-          } catch (_) {
-            this._handleDetailError();
-          } finally {
-            this.detailLoading = false;
-          }
-        },
-
-        _handleDetailError() {
-          // On error: stay on (or return to) feed, show flash message
-          this.goFeed();
-          this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
-          setTimeout(() => { this.flashMessage = ''; }, 6000);
-        },
-
-        // ────────────────────────────────────────────────────────
-        // Prerequisites modal
-        // ────────────────────────────────────────────────────────
         async openPrereqModal(topicName) {
           this.prereqTopic        = topicName;
           this.prereqDetail       = null;
@@ -334,18 +235,6 @@
           }
         },
 
-        // ────────────────────────────────────────────────────────
-        // Navigation helpers
-        // ────────────────────────────────────────────────────────
-        goFeed() {
-          this.currentView = 'feed';
-          this._pushUrl();
-          window.scrollTo({ top: 0, behavior: 'instant' });
-        },
-
-        // ────────────────────────────────────────────────────────
-        // URL sync (history.pushState)
-        // ────────────────────────────────────────────────────────
         _pushUrl() {
           const p = new URLSearchParams();
           if (this.activeSources.length) p.set('source', this.activeSources.join(','));
@@ -372,9 +261,6 @@
           this.activeTags = tag ? tag.split(',').filter(Boolean) : [];
         },
 
-        // ────────────────────────────────────────────────────────
-        // Feedback modal
-        // ────────────────────────────────────────────────────────
         openCardFeedbackModal(blogId) {
           this.feedbackBlogId    = blogId;
           this.feedbackMode      = 'card';
@@ -443,9 +329,6 @@
           setTimeout(() => { this.flashMessage = ''; }, 6000);
         },
 
-        // ────────────────────────────────────────────────────────
-        // Global Escape key handler
-        // ────────────────────────────────────────────────────────
         handleEsc() {
           if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
           if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
@@ -453,9 +336,6 @@
           if (this.showSigninModal)     { this.showSigninModal     = false; return; }
         },
 
-        // ────────────────────────────────────────────────────────
-        // Formatting helpers
-        // ────────────────────────────────────────────────────────
         copyUrl(url) {
           navigator.clipboard.writeText(url).then(() => {
             this.copied = true;
