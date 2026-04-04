@@ -23,6 +23,8 @@ class Config:
     REFRESH_INTERVAL_DAYS: int = int(os.environ.get("REFRESH_INTERVAL_DAYS", "7"))
     TAG_SIMILARITY_THRESHOLD: float = float(os.environ.get("TAG_SIMILARITY_THRESHOLD", "0.88"))
     INGEST_SECRET: str = os.environ.get("INGEST_SECRET", "")
+    SENTRY_DSN: str = os.environ.get("SENTRY_DSN", "")
+    ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "production")
 
 
 settings = Config()
