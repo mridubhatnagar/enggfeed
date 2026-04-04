@@ -22,6 +22,7 @@ import logging
 import re
 
 import requests
+import sentry_sdk
 from bs4 import BeautifulSoup
 from opentelemetry import trace
 
@@ -80,6 +81,7 @@ class IngestHandler:
             try:
                 self._process_source(source)
             except Exception as exc:
+                sentry_sdk.capture_exception(exc)
                 logger.error(
                     "Unhandled error processing source '%s': %s",
                     getattr(source, "source", source),
@@ -98,6 +100,7 @@ class IngestHandler:
         try:
             items = self.rss_client.get_feed(feed_url)
         except RSSFeedError as exc:
+            sentry_sdk.capture_exception(exc)
             logger.error("RSS feed error for source '%s': %s", source_name, exc)
             return
 
@@ -178,6 +181,7 @@ class IngestHandler:
         try:
             content = self.rss_client.get_content(feed_url, guid)
         except RSSFeedError as exc:
+            sentry_sdk.capture_exception(exc)
             logger.error("Could not fetch content for guid='%s': %s", guid, exc)
             return
 
@@ -185,6 +189,7 @@ class IngestHandler:
         try:
             llm_result = call_llm(prompt)
         except LLMUnreachableError as exc:
+            sentry_sdk.capture_exception(exc)
             logger.error(
                 "LLM call failed for guid='%s', skipping tagging/prerequisites: %s",
                 guid,
@@ -204,6 +209,7 @@ class IngestHandler:
             try:
                 self._process_tag(blog_id, tag_name, linked_tag_ids)
             except Exception as exc:
+                sentry_sdk.capture_exception(exc)
                 logger.error(
                     "Error processing tag '%s' for guid='%s': %s",
                     tag_name,
@@ -216,6 +222,7 @@ class IngestHandler:
             try:
                 self._process_prerequisite(blog_id, topic_name, linked_prerequisite_ids)
             except Exception as exc:
+                sentry_sdk.capture_exception(exc)
                 logger.error(
                     "Error processing prerequisite '%s' for guid='%s': %s",
                     topic_name,
