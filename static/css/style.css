@@ -51,6 +51,17 @@
       color: var(--accent);
       letter-spacing: -0.02em;
     }
+    .navbar-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .navbar-tagline {
+      font-size: 0.65rem;
+      font-weight: 400;
+      color: var(--text-muted);
+      letter-spacing: 0.01em;
+    }
     .navbar-spacer { flex: 1; }
     .btn-signin {
       background: var(--accent);
