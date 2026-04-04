@@ -6,7 +6,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
-from sentry_sdk.integrations.starlette import StarletteIntegration
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse
@@ -17,15 +16,15 @@ from openinference.instrumentation.anthropic import AnthropicInstrumentor
 
 from config import settings
 
-sentry_sdk.init(
-    dsn=settings.SENTRY_DSN,
-    environment=settings.ENVIRONMENT,
-    integrations=[
-        FastApiIntegration(),
-        StarletteIntegration(),
-        LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
-    ],
-)
+if settings.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=settings.SENTRY_DSN,
+        environment=settings.ENVIRONMENT,
+        integrations=[
+            FastApiIntegration(),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+        ],
+    )
 
 tracer_provider = register(
     project_name="enggsystemfeed",
