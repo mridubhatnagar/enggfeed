@@ -1,8 +1,8 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
-from exceptions import DatabaseError, LLMUnreachableError, NotFoundError, UnauthorizedError
+from exceptions import DatabaseError, LLMUnreachableError, NotFoundError
 from prerequisites.dao import PrerequisiteDAO
 from prerequisites.handler import PrerequisiteHandler
 from prerequisites.service import PrerequisiteService
@@ -21,19 +21,11 @@ def get_prerequisite_handler(db: Session = Depends(get_db)) -> PrerequisiteHandl
 @router.get("/api/v1/prerequisites/{topic_name}")
 def get_prerequisite(
     topic_name: str,
-    request: Request,
     handler: PrerequisiteHandler = Depends(get_prerequisite_handler),
 ):
-    token = request.cookies.get("access_token")
     try:
-        result = handler.get_prerequisite(topic_name=topic_name, token=token)
+        result = handler.get_prerequisite(topic_name=topic_name)
         return APIResponse(success=True, data=result, error=None)
-    except UnauthorizedError as exc:
-        return APIResponse(
-            success=False,
-            data=None,
-            error=ErrorDetail(code=401, message=str(exc)),
-        )
     except NotFoundError as exc:
         return APIResponse(
             success=False,

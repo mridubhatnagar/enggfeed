@@ -12,3 +12,24 @@
 - All FK columns (`blog_chunk.blog_id`, `blog_tag.blog_id`, `blog_prerequisite.blog_id`) reference the UUID
 
 **Lesson:** Externally-controlled, format-inconsistent values should never be used as primary keys or foreign key anchors.
+
+---
+
+## Summary/Simplify/Prerequisites failing on server
+
+**Symptom:** Requesting Summary, Simplify, or Prerequisites for a blog returned a 500 or 502 error.
+
+**Root cause:** Two independent issues, both surfaced while debugging together:
+
+1. Redis was unreachable (`Error -3 connecting to redis:6379. Temporary failure in name resolution.`) — the `redis` container had lost its Docker network attachment, so `app` couldn't resolve the hostname. Local-only, from a container left in a bad state after a prior `docker compose up` port conflict.
+2. `summary/handler.py` and `simplify/handler.py` fetch article content on demand via `RSSClient.get_content(feed_url, guid)`, which re-parses the *live* RSS feed and matches by `guid`. Most feeds only carry a rolling window of recent items (e.g. Cloudflare's feed holds ~20 items, going back about 2 weeks). Once a blog's article ages out of that window, `get_content` can never find it again — permanent `502: Article with guid '...' not found in feed`. Since blogs are ingested daily and kept forever but the feed only exposes recent items, this affects any article requested after it scrolls off the source feed — which grows to cover most of the DB over time. Confirmed by reproducing against an old blog (`published_at` 2026-03-27) vs. checking Cloudflare's live feed (only entries from 2026-08-06 onward).
+
+**Fix:**
+1. Redis — recreated the container (`docker compose up -d --force-recreate redis`) to reattach it to the network. Not yet confirmed whether this recurs on the actual server.
+2. Content-aging — **decided, not yet implemented.** Raw article content still won't be stored (keeps the existing "no scraping, no content storage" decision intact). Instead:
+   - Generate summary and simplify **eagerly during ingest**, reusing the article content `ingest/handler.py` already fetches for the tags/prerequisites LLM call — while the article is still guaranteed to be in the live feed. Gated by content tier, same as today (summary: FULL + PARTIAL, simplify: FULL only).
+   - Drop the 7-day `check_refresh_due` regeneration cycle entirely, for summary, simplify, **and** prerequisites. It only ever existed to opportunistically pick up future prompt/model improvements; that's better handled as a deliberate manual regeneration (the `force_update` flag already in `SummaryService`/`SimplifyService` covers this) than an always-on check on every request that, for summary/simplify, was also what re-triggered the live RSS fetch and reintroduced this exact bug on every stale read.
+   - Net effect: summary/simplify become generate-once-at-ingest, frozen thereafter, served from DB + a 10-year Redis cache (`database.py` `_DEFAULT_TIMEOUT`, decoupled from `REFRESH_INTERVAL_DAYS`) — no live RSS dependency ever exists on the read path. Prerequisites stays on-demand at first click (no content-aging risk there), just without the periodic refresh.
+   - Also fixes a second latent issue surfaced along the way: lazy generation meant the first user to request a given summary/simplify ate a synchronous multi-second LLM call before the page rendered — worse once sign-in (which gated this feature) is potentially removed, since there's no friction to make a user wait through it.
+
+**Lesson:** "Fetch on demand, never store" only works if the upstream source retains the data indefinitely. RSS feeds don't — they're a rolling window, not an archive. Any on-demand fetch keyed against a live feed needs either a fallback source or a policy for content that's aged out. Also: caching hides staleness on repeat reads, but never protects the first read of something — the fix for a first-read problem has to change *when* work happens, not how long the result is kept afterward.

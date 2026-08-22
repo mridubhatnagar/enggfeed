@@ -30,25 +30,6 @@
     </a>
 
     <div class="navbar-spacer"></div>
-
-    <!-- Guest state -->
-    <template x-if="!user">
-      <button class="btn-signin" @click="showSigninModal = true">Sign In</button>
-    </template>
-
-    <!-- Signed-in state -->
-    <template x-if="user">
-      <div class="navbar-user">
-        <div class="avatar">
-          <template x-if="user.profile_url">
-            <img :src="user.profile_url" :alt="user.name" @error="$event.target.style.display='none'" />
-          </template>
-          <span x-show="!user.profile_url" x-text="initials(user.name)"></span>
-        </div>
-        <span class="navbar-name" x-text="user.name"></span>
-        <button class="btn-signout" @click="signOut()">Sign Out</button>
-      </div>
-    </template>
   </nav>
 
   <div x-show="flashMessage" x-cloak class="flash-bar" role="alert">
@@ -92,8 +73,8 @@
         </div>
       </div>
 
-      <!-- Topic row (signed-in only) -->
-      <template x-if="user && tags.length > 0">
+      <!-- Topic row -->
+      <template x-if="tags.length > 0">
         <div class="filter-row">
           <span class="filter-row-label">Topic</span>
           <div class="filter-scroll-wrap">
@@ -214,8 +195,8 @@
                     </div>
                   </template>
 
-                  <!-- Prerequisites chips (signed-in, Partial + Full tier only) -->
-                  <template x-if="user && blog.content_tier !== 'LIMITED' && blog.prerequisites && blog.prerequisites.length > 0">
+                  <!-- Prerequisites chips (Partial + Full tier only) -->
+                  <template x-if="blog.content_tier !== 'LIMITED' && blog.prerequisites && blog.prerequisites.length > 0">
                     <div class="chips-section">
                       <div class="chip-section-label">Prerequisites</div>
                       <div class="chips-row" role="list" aria-label="Prerequisites">
@@ -239,8 +220,8 @@
                     </div>
                   </template>
 
-                  <!-- Tags chips (signed-in only) -->
-                  <template x-if="user && blog.content_tier !== 'LIMITED' && blog.tags && blog.tags.length > 0">
+                  <!-- Tags chips -->
+                  <template x-if="blog.content_tier !== 'LIMITED' && blog.tags && blog.tags.length > 0">
                     <div class="chips-section">
                       <div class="chip-section-label">Tags</div>
                       <div class="chips-row" role="list" aria-label="Tags">
@@ -267,29 +248,21 @@
                   <!-- Card footer: flag + action buttons -->
                   <div class="card-footer">
 
-                    <!-- Flag button (signed-in, non-LIMITED only) -->
-                    <button class="btn-flag" x-show="user && blog.content_tier !== 'LIMITED'" :id="blog.id" onclick="openCardFeedbackModal(this.id)">
+                    <!-- Flag button (non-LIMITED only) -->
+                    <button class="btn-flag" x-show="blog.content_tier !== 'LIMITED'" :id="blog.id" onclick="openCardFeedbackModal(this.id)">
                       &#9873; Report incorrect tags, prerequisites
                     </button>
 
                     <!-- Action buttons -->
                     <div class="card-actions">
 
-                      <!-- Summary button: hidden for LIMITED, locked for guests, active for signed-in -->
-                      <button x-show="blog.content_tier !== 'LIMITED' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to read summary">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Summary
-                      </button>
-                      <button x-show="blog.content_tier !== 'LIMITED' && user" class="btn-card-action" @click="window.location.href = '/summary/' + blog.id">
+                      <!-- Summary button: hidden for LIMITED -->
+                      <button x-show="blog.content_tier !== 'LIMITED'" class="btn-card-action" @click="window.location.href = '/summary/' + blog.id">
                         Summary
                       </button>
 
-                      <!-- Simplify button: FULL tier only, locked for guests, hidden for Partial -->
-                      <button x-show="blog.content_tier === 'FULL' && !user" class="btn-card-action locked" @click="showSigninModal = true" title="Sign in to simplify">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        Simplify
-                      </button>
-                      <button x-show="blog.content_tier === 'FULL' && user" class="btn-card-action" @click="window.location.href = '/simplify/' + blog.id">
+                      <!-- Simplify button: FULL tier only -->
+                      <button x-show="blog.content_tier === 'FULL'" class="btn-card-action" @click="window.location.href = '/simplify/' + blog.id">
                         Simplify
                       </button>
 
@@ -426,6 +399,22 @@
           </div>
         </template>
 
+        <!-- Optional contact info -->
+        <div class="feedback-field">
+          <label class="feedback-label">Name <span class="feedback-optional">(optional)</span></label>
+          <input type="text" class="feedback-input" x-model="feedbackName" placeholder="Your name" maxlength="255">
+        </div>
+        <div class="feedback-field">
+          <label class="feedback-label">Email <span class="feedback-optional">(optional)</span></label>
+          <input type="email" class="feedback-input" x-model="feedbackEmail" placeholder="you@example.com" maxlength="255">
+        </div>
+
+        <!-- Honeypot — real users never see or fill this -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="fb-website">Website</label>
+          <input type="text" id="fb-website" name="website" x-model="feedbackWebsite" tabindex="-1" autocomplete="off">
+        </div>
+
         <button class="btn-feedback-submit" @click="submitFeedback()" :disabled="feedbackSubmitting" x-text="feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'"></button>
       </div>
     </div>
@@ -453,45 +442,6 @@
       </div>
     </div>
   </div>
-
-  <div
-    class="modal-backdrop"
-    x-show="showSigninModal"
-    x-cloak
-    @click.self="showSigninModal = false"
-    role="dialog"
-    aria-modal="true"
-    aria-label="Sign in"
-  >
-    <div class="modal-box signin-modal">
-      <div class="modal-header" style="justify-content: flex-end; padding-bottom: 0;">
-        <button class="modal-close" @click="showSigninModal = false" aria-label="Close modal">&times;</button>
-      </div>
-      <div class="modal-body" style="text-align: center; padding-top: 8px;">
-        <div class="signin-logo">EnggFeed</div>
-        <p class="signin-tagline">
-          Discover &amp; understand engineering insights from top tech companies.<br>
-          Sign in to unlock browsable topic tags, summaries, ELI5 explanations, and prerequisites.
-        </p>
-        <!-- Fetch auth URL first (sets oauth_state cookie), then redirect -->
-        <a class="btn-google" href="#" @click.prevent="
-          fetch('/auth/initiate')
-            .then(r => r.json())
-            .then(data => { window.location.href = data.data.auth_url })
-        ">
-          <!-- Google "G" logo SVG -->
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-          </svg>
-          Sign in with Google
-        </a>
-      </div>
-    </div>
-  </div><!-- /signin modal -->
-
 
   <script src="/static/js/app.js"></script>
 

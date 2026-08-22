@@ -1,23 +1,10 @@
 import json
-from datetime import datetime, timedelta, timezone
 
 import anthropic
 import openai
 
 from config import settings
-from constants import REFRESH_INTERVAL_DAYS
 from exceptions import LLMUnreachableError
-
-
-def check_refresh_due(updated_at: datetime | None) -> bool:
-    """Return True if updated_at is None or older than REFRESH_INTERVAL_DAYS."""
-    if updated_at is None:
-        return True
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=REFRESH_INTERVAL_DAYS)
-    # Make updated_at timezone-aware if it is naive
-    if updated_at.tzinfo is None:
-        updated_at = updated_at.replace(tzinfo=timezone.utc)
-    return updated_at < cutoff
 
 
 def call_llm(prompt: str, timeout: int | None = None) -> dict:
