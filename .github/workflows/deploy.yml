@@ -9,14 +9,14 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy to DigitalOcean
+      - name: Deploy to AWS EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ vars.DO_USER }}
-          key: ${{ secrets.DO_SSH_KEY }}
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ vars.AWS_USER }}
+          key: ${{ secrets.AWS_SSH_KEY }}
           script: |
-            cd ${{ vars.DO_REPO_PATH }}
+            cd ${{ vars.AWS_REPO_PATH }}
             git pull
             docker compose up -d --build
             docker compose exec app alembic upgrade head
