@@ -12,7 +12,7 @@ from rss_client import RSSClient
 from summary.schemas import SummaryContent, SummaryDetail
 from summary.service import SummaryService
 from tags.service import BlogTagService, TagService
-from utils import call_llm, check_refresh_due
+from utils import call_llm
 
 
 def _compute_content_tier(word_count: int) -> ContentTier:
@@ -59,11 +59,12 @@ class SummaryHandler:
 
         summary_row = self.summary_service.get_summary_by_blog_id(blog_id)
 
-        updated_at = summary_row.updated_at if summary_row else None
-        if check_refresh_due(updated_at):
+        if summary_row is None:
             source = self.blog_source_service.get_source_by_id(blog.blog_source_id)
             if source is None:
-                raise RSSFeedError(f"Blog source not found for id: {blog.blog_source_id}")
+                raise RSSFeedError(
+                    f"Blog source not found for id: {blog.blog_source_id}"
+                )
             content_text = self.rss_client.get_content(source.rss_feed_link, blog.guid)
 
             prompt = SUMMARY_PROMPT.format(title=blog.title, content=content_text)
@@ -72,13 +73,11 @@ class SummaryHandler:
                 "short_summary": llm_result.get("short_summary", ""),
                 "key_points": llm_result.get("key_points", []),
             }
+            summary_row = self.summary_service.create_summary(blog_id, new_content)
 
-            if summary_row is not None:
-                summary_row = self.summary_service.update_summary(blog_id, new_content)
-            else:
-                summary_row = self.summary_service.create_summary(blog_id, new_content)
-
-        blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids([uuid.UUID(blog_id)])
+        blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids(
+            [uuid.UUID(blog_id)]
+        )
         all_tag_ids = list({row.tag_id for row in blog_tag_rows})
         tag_names: list[str] = []
         if all_tag_ids:
@@ -87,10 +86,14 @@ class SummaryHandler:
 
         prerequisite_names: list[str] = []
         if tier != ContentTier.LIMITED:
-            bp_rows = self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids([uuid.UUID(blog_id)])
+            bp_rows = self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(
+                [uuid.UUID(blog_id)]
+            )
             all_prereq_ids = list({row.prerequisite_id for row in bp_rows})
             if all_prereq_ids:
-                prereq_objects = self.prerequisite_service.list_prerequisites_by_ids(all_prereq_ids)
+                prereq_objects = self.prerequisite_service.list_prerequisites_by_ids(
+                    all_prereq_ids
+                )
                 prerequisite_names = [p.topic_name for p in prereq_objects]
 
         source_obj = self.blog_source_service.get_source_by_id(blog.blog_source_id)

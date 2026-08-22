@@ -11,7 +11,7 @@ from rss_client import RSSClient
 from simplify.schemas import SimplifyContent, SimplifyDetail
 from simplify.service import SimplifyService
 from tags.service import BlogTagService, TagService
-from utils import call_llm, check_refresh_due
+from utils import call_llm
 
 
 def _compute_content_tier(word_count: int) -> ContentTier:
@@ -54,38 +54,43 @@ class SimplifyHandler:
 
         tier = _compute_content_tier(blog.word_count)
         if tier in (ContentTier.LIMITED, ContentTier.PARTIAL):
-            raise ForbiddenError("Simplify not available for limited or partial tier content")
+            raise ForbiddenError(
+                "Simplify not available for limited or partial tier content"
+            )
 
         simplify_row = self.simplify_service.get_simplify_by_blog_id(blog_id)
 
-        updated_at = simplify_row.updated_at if simplify_row else None
-        if check_refresh_due(updated_at):
+        if simplify_row is None:
             source = self.blog_source_service.get_source_by_id(blog.blog_source_id)
             if source is None:
-                raise RSSFeedError(f"Blog source not found for id: {blog.blog_source_id}")
+                raise RSSFeedError(
+                    f"Blog source not found for id: {blog.blog_source_id}"
+                )
             content_text = self.rss_client.get_content(source.rss_feed_link, blog.guid)
 
             prompt = SIMPLIFY_PROMPT.format(title=blog.title, content=content_text)
             llm_result = call_llm(prompt)
             new_simplify = llm_result.get("simplify", "")
+            simplify_row = self.simplify_service.create_simplify(blog_id, new_simplify)
 
-            if simplify_row is not None:
-                simplify_row = self.simplify_service.update_simplify(blog_id, new_simplify)
-            else:
-                simplify_row = self.simplify_service.create_simplify(blog_id, new_simplify)
-
-        blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids([uuid.UUID(blog_id)])
+        blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids(
+            [uuid.UUID(blog_id)]
+        )
         all_tag_ids = list({row.tag_id for row in blog_tag_rows})
         tag_names: list[str] = []
         if all_tag_ids:
             tag_objects = self.tag_service.list_tags_by_ids(all_tag_ids)
             tag_names = [t.tag for t in tag_objects]
 
-        bp_rows = self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids([uuid.UUID(blog_id)])
+        bp_rows = self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(
+            [uuid.UUID(blog_id)]
+        )
         all_prereq_ids = list({row.prerequisite_id for row in bp_rows})
         prerequisite_names: list[str] = []
         if all_prereq_ids:
-            prereq_objects = self.prerequisite_service.list_prerequisites_by_ids(all_prereq_ids)
+            prereq_objects = self.prerequisite_service.list_prerequisites_by_ids(
+                all_prereq_ids
+            )
             prerequisite_names = [p.topic_name for p in prereq_objects]
 
         source_obj = self.blog_source_service.get_source_by_id(blog.blog_source_id)
