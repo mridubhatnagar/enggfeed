@@ -1,7 +1,6 @@
     function simplifyPage() {
       return {
 
-        user: null,
         flashMessage: '',
 
         blogId: null,
@@ -19,6 +18,9 @@
         feedbackBlogId: null,
         feedbackDetailType: null,
         feedbackDetailText: '',
+        feedbackName: '',
+        feedbackEmail: '',
+        feedbackWebsite: '',
         feedbackSubmitting: false,
 
         copied: false,
@@ -26,17 +28,7 @@
         async _init() {
           const parts = window.location.pathname.split('/').filter(Boolean);
           this.blogId = decodeURIComponent(parts[parts.length - 1]);
-          await Promise.all([this._fetchUser(), this._load()]);
-        },
-
-        async _fetchUser() {
-          try {
-            const res = await fetch('/auth/me', { credentials: 'include' });
-            if (res.ok) {
-              const json = await res.json();
-              if (json.success && json.data) this.user = json.data;
-            }
-          } catch (_) {}
+          await this._load();
         },
 
         async _load() {
@@ -46,8 +38,6 @@
             const json = await res.json();
             if (json.success && json.data) {
               this.simplifyDetail = json.data;
-            } else if (res.status === 401) {
-              window.location.href = '/';
             } else {
               this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
               setTimeout(() => { this.flashMessage = ''; }, 6000);
@@ -58,18 +48,6 @@
           } finally {
             this.detailLoading = false;
           }
-        },
-
-        async signOut() {
-          try {
-            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
-          } catch (_) {}
-          window.location.href = '/';
-        },
-
-        initials(name) {
-          if (!name) return '?';
-          return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
         },
 
         async openPrereqModal(topicName) {
@@ -94,6 +72,9 @@
           this.feedbackBlogId     = blogId;
           this.feedbackDetailType = type;
           this.feedbackDetailText = '';
+          this.feedbackName       = '';
+          this.feedbackEmail      = '';
+          this.feedbackWebsite    = '';
           this.showFeedbackModal  = true;
         },
 
@@ -116,7 +97,14 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ blog_id: blogId, type, content }),
+              body: JSON.stringify({
+                blog_id: blogId,
+                type,
+                content,
+                name: this.feedbackName.trim() || null,
+                email: this.feedbackEmail.trim() || null,
+                website: this.feedbackWebsite.trim() || null,
+              }),
             });
             return await res.json();
           } catch (_) {

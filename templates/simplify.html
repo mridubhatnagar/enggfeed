@@ -27,19 +27,6 @@
     </a>
 
     <div class="navbar-spacer"></div>
-
-    <template x-if="user">
-      <div class="navbar-user">
-        <div class="avatar">
-          <template x-if="user.profile_url">
-            <img :src="user.profile_url" :alt="user.name" @error="$event.target.style.display='none'" />
-          </template>
-          <span x-show="!user.profile_url" x-text="initials(user.name)"></span>
-        </div>
-        <span class="navbar-name" x-text="user.name"></span>
-        <button class="btn-signout" @click="signOut()">Sign Out</button>
-      </div>
-    </template>
   </nav>
 
   <div x-show="flashMessage" x-cloak class="flash-bar" role="alert">
@@ -235,6 +222,22 @@
           <label class="feedback-label">Your feedback</label>
           <textarea class="feedback-textarea" x-model="feedbackDetailText" placeholder="Describe what's wrong..." maxlength="500"></textarea>
           <div class="feedback-char-count" x-text="feedbackDetailText.length + ' / 500'"></div>
+        </div>
+
+        <!-- Optional contact info -->
+        <div class="feedback-field">
+          <label class="feedback-label">Name <span class="feedback-optional">(optional)</span></label>
+          <input type="text" class="feedback-input" x-model="feedbackName" placeholder="Your name" maxlength="255">
+        </div>
+        <div class="feedback-field">
+          <label class="feedback-label">Email <span class="feedback-optional">(optional)</span></label>
+          <input type="email" class="feedback-input" x-model="feedbackEmail" placeholder="you@example.com" maxlength="255">
+        </div>
+
+        <!-- Honeypot — real users never see or fill this -->
+        <div class="hp-field" aria-hidden="true">
+          <label for="fb-website">Website</label>
+          <input type="text" id="fb-website" name="website" x-model="feedbackWebsite" tabindex="-1" autocomplete="off">
         </div>
 
         <button class="btn-feedback-submit" @click="submitFeedback()" :disabled="feedbackSubmitting" x-text="feedbackSubmitting ? 'Submitting...' : 'Submit Feedback'"></button>

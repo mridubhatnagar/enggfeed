@@ -1,7 +1,6 @@
     function app() {
       return {
 
-        user: null,
         flashMessage: '',
 
         feedLoading: false,
@@ -23,8 +22,6 @@
         prereqDetail: null,        // PrerequisiteDetail from /api/v1/prerequisites/{topic}
         prereqShowDeepDive: false,
 
-        showSigninModal: false,
-
         showFeedbackSuccess: false,
         showFeedbackModal: false,
         feedbackBlogId: null,
@@ -33,6 +30,9 @@
         feedbackTagText: '',
         feedbackPrereqText: '',
         feedbackDetailText: '',
+        feedbackName: '',
+        feedbackEmail: '',
+        feedbackWebsite: '',
         feedbackSubmitting: false,
 
         copied: false,
@@ -41,47 +41,15 @@
           // Read URL params first so bookmarked/shared URLs restore correctly
           this._readUrlParams();
 
-          // Fire auth check, sources, and tags fetch in parallel
           await Promise.all([
-            this._fetchUser(),
             this._fetchSources(),
             this._fetchTags(),
           ]);
 
-          // Load blog cards (auth state affects tags/prereqs returned)
           await this._fetchBlogs();
 
           // Wire up infinite scroll after initial render
           this._initInfiniteScroll();
-        },
-
-        async _fetchUser() {
-          try {
-            const res = await fetch('/auth/me', { credentials: 'include' });
-            if (res.ok) {
-              const json = await res.json();
-              if (json.success && json.data) {
-                this.user = json.data;
-              }
-            }
-            // 401 = guest — silently ignored
-          } catch (_) {
-            // Network error — treat as guest
-          }
-        },
-
-        async signOut() {
-          try {
-            await fetch('/auth/logout', { method: 'POST', credentials: 'include' });
-          } catch (_) {}
-          this.user = null;
-          // Re-fetch so tags/prereqs disappear from cards immediately
-          await this._fetchBlogs();
-        },
-
-        initials(name) {
-          if (!name) return '?';
-          return name.trim().split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
         },
 
         async _fetchSources() {
@@ -245,16 +213,6 @@
 
         _readUrlParams() {
           const p = new URLSearchParams(window.location.search);
-          const error = p.get('error');
-          if (error === 'not_allowed') {
-            this.flashMessage = 'Your account is not authorised to access this app.';
-            setTimeout(() => { this.flashMessage = ''; }, 6000);
-            history.replaceState({}, '', '/');
-          } else if (error === 'auth_failed') {
-            this.flashMessage = 'Sign-in failed. Please try again.';
-            setTimeout(() => { this.flashMessage = ''; }, 6000);
-            history.replaceState({}, '', '/');
-          }
           const src = p.get('source');
           this.activeSources = src ? src.split(',').filter(Boolean) : [];
           const tag = p.get('tag');
@@ -266,6 +224,9 @@
           this.feedbackMode      = 'card';
           this.feedbackTagText   = '';
           this.feedbackPrereqText = '';
+          this.feedbackName      = '';
+          this.feedbackEmail     = '';
+          this.feedbackWebsite   = '';
           this.showFeedbackModal = true;
         },
 
@@ -274,6 +235,9 @@
           this.feedbackMode      = 'detail';
           this.feedbackDetailType = type;
           this.feedbackDetailText = '';
+          this.feedbackName      = '';
+          this.feedbackEmail     = '';
+          this.feedbackWebsite   = '';
           this.showFeedbackModal = true;
         },
 
@@ -308,7 +272,14 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               credentials: 'include',
-              body: JSON.stringify({ blog_id: blogId, type, content }),
+              body: JSON.stringify({
+                blog_id: blogId,
+                type,
+                content,
+                name: this.feedbackName.trim() || null,
+                email: this.feedbackEmail.trim() || null,
+                website: this.feedbackWebsite.trim() || null,
+              }),
             });
             return await res.json();
           } catch (_) {
@@ -333,7 +304,6 @@
           if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
           if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
           if (this.showPrereqModal)     { this.showPrereqModal     = false; return; }
-          if (this.showSigninModal)     { this.showSigninModal     = false; return; }
         },
 
         copyUrl(url) {
