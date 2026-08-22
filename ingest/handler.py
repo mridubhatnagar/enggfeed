@@ -6,6 +6,8 @@ Pipeline per source:
         → get_content → call_llm (tags + prerequisites)
         → _process_tag per tag
         → _process_prerequisite per prerequisite
+        → _process_summary (PARTIAL + FULL tier)
+        → _process_simplify (FULL tier only)
 
 Tag / prerequisite normalisation:
     lowercase + strip + collapse hyphens/underscores/spaces → embed
@@ -27,12 +29,20 @@ from bs4 import BeautifulSoup
 from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
-from constants import CONTENT_TIER_LIMITED_MAX_WORDS, TAG_SIMILARITY_THRESHOLD
+from constants import (
+    CONTENT_TIER_LIMITED_MAX_WORDS,
+    CONTENT_TIER_PARTIAL_MAX_WORDS,
+    TAG_SIMILARITY_THRESHOLD,
+)
 from exceptions import LLMUnreachableError, RSSFeedError
 from ingest.embedder import Embedder
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.ingest import INGEST_PROMPT
+from prompts.simplify import SIMPLIFY_PROMPT
+from prompts.summary import SUMMARY_PROMPT
 from rss_client import RSSClient
+from simplify.service import SimplifyService
+from summary.service import SummaryService
 from tags.service import BlogTagService, TagService
 from utils import call_llm
 
@@ -56,6 +66,8 @@ class IngestHandler:
         blog_tag_service: BlogTagService,
         prerequisite_service: PrerequisiteService,
         blog_prerequisite_service: BlogPrerequisiteService,
+        summary_service: SummaryService,
+        simplify_service: SimplifyService,
         rss_client: RSSClient,
         embedder: Embedder,
     ) -> None:
@@ -65,6 +77,8 @@ class IngestHandler:
         self.blog_tag_service = blog_tag_service
         self.prerequisite_service = prerequisite_service
         self.blog_prerequisite_service = blog_prerequisite_service
+        self.summary_service = summary_service
+        self.simplify_service = simplify_service
         self.rss_client = rss_client
         self.embedder = embedder
 
@@ -201,7 +215,10 @@ class IngestHandler:
         prerequisites: list[str] = llm_result.get("prerequisites", [])
         logger.info(
             "LLM result for guid='%s': raw=%s tags=%s prerequisites=%s",
-            guid, llm_result, tags, prerequisites,
+            guid,
+            llm_result,
+            tags,
+            prerequisites,
         )
 
         linked_tag_ids: set = set()
@@ -229,6 +246,36 @@ class IngestHandler:
                     guid,
                     exc,
                 )
+
+        try:
+            self._process_summary(blog_id, title, content)
+        except Exception as exc:
+            sentry_sdk.capture_exception(exc)
+            logger.error("Error generating summary for guid='%s': %s", guid, exc)
+
+        if word_count >= CONTENT_TIER_PARTIAL_MAX_WORDS:
+            try:
+                self._process_simplify(blog_id, title, content)
+            except Exception as exc:
+                sentry_sdk.capture_exception(exc)
+                logger.error("Error generating simplify for guid='%s': %s", guid, exc)
+
+    def _process_summary(self, blog_id: str, title: str, content: str) -> None:
+        """Generate and persist the summary for one article at ingest time."""
+        prompt = SUMMARY_PROMPT.format(title=title, content=content)
+        llm_result = call_llm(prompt)
+        summary_content = {
+            "short_summary": llm_result.get("short_summary", ""),
+            "key_points": llm_result.get("key_points", []),
+        }
+        self.summary_service.create_summary(blog_id, summary_content)
+
+    def _process_simplify(self, blog_id: str, title: str, content: str) -> None:
+        """Generate and persist the ELI5 simplify for one article at ingest time."""
+        prompt = SIMPLIFY_PROMPT.format(title=title, content=content)
+        llm_result = call_llm(prompt)
+        simplify_content = llm_result.get("simplify", "")
+        self.simplify_service.create_simplify(blog_id, simplify_content)
 
     def _fetch_thumbnail(self, link: str) -> str | None:
         """Scrape og:image from the article URL. Returns None on any failure."""
@@ -259,7 +306,9 @@ class IngestHandler:
         """
         normalized = self._normalize_name(tag_name)
         embedding = self.embedder.embed(normalized)
-        match, score = self.tag_service.find_similar_tag(embedding, TAG_SIMILARITY_THRESHOLD)
+        match, score = self.tag_service.find_similar_tag(
+            embedding, TAG_SIMILARITY_THRESHOLD
+        )
 
         with tracer.start_as_current_span("tag.normalize") as span:
             span.set_attribute("tag.candidate", tag_name)
@@ -282,7 +331,9 @@ class IngestHandler:
         self.blog_tag_service.create_blog_tag(blog_id, tag_id)
         linked_tag_ids.add(tag_id)
 
-    def _process_prerequisite(self, blog_id: str, topic_name: str, linked_prerequisite_ids: set) -> None:
+    def _process_prerequisite(
+        self, blog_id: str, topic_name: str, linked_prerequisite_ids: set
+    ) -> None:
         """Normalize, embed, find-or-create prerequisite, link to blog.
 
         Wraps the normalisation decision in an OTel span with attributes:
@@ -314,7 +365,11 @@ class IngestHandler:
                 prerequisite_id = new_prereq.id
 
         if prerequisite_id in linked_prerequisite_ids:
-            logger.debug("Prerequisite '%s' already linked to blog, skipping", normalized)
+            logger.debug(
+                "Prerequisite '%s' already linked to blog, skipping", normalized
+            )
             return
-        self.blog_prerequisite_service.create_blog_prerequisite(blog_id, prerequisite_id)
+        self.blog_prerequisite_service.create_blog_prerequisite(
+            blog_id, prerequisite_id
+        )
         linked_prerequisite_ids.add(prerequisite_id)

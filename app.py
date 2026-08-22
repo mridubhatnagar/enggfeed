@@ -1,7 +1,9 @@
 import logging
 import secrets
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s"
+)
 
 import sentry_sdk
 from sentry_sdk.integrations.fastapi import FastApiIntegration
@@ -14,7 +16,21 @@ from fastapi.staticfiles import StaticFiles
 from phoenix.otel import register
 from openinference.instrumentation.anthropic import AnthropicInstrumentor
 
+from blog.dao import BlogDAO, BlogSourceDAO
+from blog.service import BlogService, BlogSourceService
 from config import settings
+from database import SessionLocal
+from ingest.embedder import Embedder
+from ingest.handler import IngestHandler
+from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
+from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
+from rss_client import RSSClient
+from simplify.dao import SimplifyDAO
+from simplify.service import SimplifyService
+from summary.dao import SummaryDAO
+from summary.service import SummaryService
+from tags.dao import BlogTagDAO, TagDAO
+from tags.service import BlogTagService, TagService
 
 if settings.SENTRY_DSN:
     sentry_sdk.init(
@@ -71,6 +87,7 @@ async def swagger_ui(credentials: HTTPBasicCredentials = Depends(_security)):
 async def openapi_spec(credentials: HTTPBasicCredentials = Depends(_security)):
     _verify_docs_credentials(credentials)
     from fastapi.openapi.utils import get_openapi
+
     return get_openapi(title=app.title, version=app.version, routes=app.routes)
 
 
@@ -91,45 +108,41 @@ def simplify_page(blog_id: str):
 
 # [backend-auth] auth router
 from auth.controller import router as auth_router
+
 app.include_router(auth_router)
 
 # [backend-blog] blog router
 from blog.controller import router as blog_router
+
 app.include_router(blog_router)
 
 # [backend-summary-simplify] summary router
 from summary.controller import router as summary_router
+
 app.include_router(summary_router)
 
 # [backend-summary-simplify] simplify router
 from simplify.controller import router as simplify_router
+
 app.include_router(simplify_router)
 
 # [backend-prerequisites] prerequisites router
 from prerequisites.controller import router as prerequisites_router
+
 app.include_router(prerequisites_router)
 
 # feedback router
 from feedback.controller import router as feedback_router
+
 app.include_router(feedback_router)
 
 # ingest router
 from ingest.controller import router as ingest_router
+
 app.include_router(ingest_router)
 
+
 # [backend-ingest] startup ingest
-from blog.dao import BlogDAO, BlogSourceDAO
-from blog.service import BlogService, BlogSourceService
-from database import SessionLocal
-from ingest.embedder import Embedder
-from ingest.handler import IngestHandler
-from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
-from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
-from rss_client import RSSClient
-from tags.dao import BlogTagDAO, TagDAO
-from tags.service import BlogTagService, TagService
-
-
 def _run_ingest() -> None:
     """Instantiate a fresh DB session and run the ingest pipeline."""
     db = SessionLocal()
@@ -141,6 +154,8 @@ def _run_ingest() -> None:
             blog_tag_service=BlogTagService(BlogTagDAO(db)),
             prerequisite_service=PrerequisiteService(PrerequisiteDAO(db)),
             blog_prerequisite_service=BlogPrerequisiteService(BlogPrerequisiteDAO(db)),
+            summary_service=SummaryService(SummaryDAO(db)),
+            simplify_service=SimplifyService(SimplifyDAO(db)),
             rss_client=RSSClient(),
             embedder=Embedder(),
         )
@@ -151,6 +166,7 @@ def _run_ingest() -> None:
 
 def _is_first_run() -> bool:
     from blog.models import Blog
+
     db = SessionLocal()
     try:
         return db.query(Blog).first() is None

@@ -3,7 +3,8 @@ from abc import ABC, abstractmethod
 
 from sqlalchemy.orm import Session
 
-from database import _DEFAULT_TIMEOUT, cache
+from constants import CACHE_DEFAULT_TIMEOUT
+from database import cache
 from exceptions import DatabaseError
 from prerequisites.models import BlogPrerequisite, Prerequisite
 
@@ -12,7 +13,9 @@ _KEY_PREFIX = "prerequisite_by_topic"
 
 class IPrerequisiteDAO(ABC):
     @abstractmethod
-    def get_by_topic_name(self, topic_name: str, use_cache: bool = True, force_update: bool = False): ...
+    def get_by_topic_name(
+        self, topic_name: str, use_cache: bool = True, force_update: bool = False
+    ): ...
 
     @abstractmethod
     def list_by_ids(self, prerequisite_ids: list[uuid.UUID]): ...
@@ -33,8 +36,10 @@ class PrerequisiteDAO(IPrerequisiteDAO):
     def __init__(self, db: Session) -> None:
         self.db = db
 
-    @cache.cached(timeout=_DEFAULT_TIMEOUT, key_prefix=_KEY_PREFIX)
-    def get_by_topic_name(self, topic_name: str, use_cache: bool = True, force_update: bool = False):
+    @cache.cached(timeout=CACHE_DEFAULT_TIMEOUT, key_prefix=_KEY_PREFIX)
+    def get_by_topic_name(
+        self, topic_name: str, use_cache: bool = True, force_update: bool = False
+    ):
         try:
             return (
                 self.db.query(Prerequisite)
@@ -42,7 +47,9 @@ class PrerequisiteDAO(IPrerequisiteDAO):
                 .first()
             )
         except Exception as exc:
-            raise DatabaseError(f"Failed to get prerequisite by topic name: {exc}") from exc
+            raise DatabaseError(
+                f"Failed to get prerequisite by topic name: {exc}"
+            ) from exc
 
     def list_by_ids(self, prerequisite_ids: list[uuid.UUID]) -> list:
         try:
@@ -56,9 +63,7 @@ class PrerequisiteDAO(IPrerequisiteDAO):
         except Exception as exc:
             raise DatabaseError(f"Failed to list prerequisites by ids: {exc}") from exc
 
-    def find_similar(
-        self, embedding: list[float], threshold: float
-    ) -> tuple:
+    def find_similar(self, embedding: list[float], threshold: float) -> tuple:
         """Find the most similar prerequisite using pgvector cosine distance.
 
         Returns (match, score) where score is cosine similarity.
@@ -69,7 +74,9 @@ class PrerequisiteDAO(IPrerequisiteDAO):
             result = (
                 self.db.query(
                     Prerequisite,
-                    (1 - Prerequisite.embedding.cosine_distance(embedding)).label("similarity"),
+                    (1 - Prerequisite.embedding.cosine_distance(embedding)).label(
+                        "similarity"
+                    ),
                 )
                 .order_by(Prerequisite.embedding.cosine_distance(embedding))
                 .first()
@@ -93,7 +100,7 @@ class PrerequisiteDAO(IPrerequisiteDAO):
         except Exception as exc:
             raise DatabaseError(f"Failed to create prerequisite: {exc}") from exc
 
-    @cache.set(key_prefix=_KEY_PREFIX, timeout=_DEFAULT_TIMEOUT, key_args=(0,))
+    @cache.set(key_prefix=_KEY_PREFIX, timeout=CACHE_DEFAULT_TIMEOUT, key_args=(0,))
     def update(self, topic_name: str, content: dict) -> Prerequisite | None:
         try:
             from datetime import datetime, timezone
@@ -137,7 +144,9 @@ class BlogPrerequisiteDAO(IBlogPrerequisiteDAO):
                 .all()
             )
         except Exception as exc:
-            raise DatabaseError(f"Failed to list blog prerequisites by blog id: {exc}") from exc
+            raise DatabaseError(
+                f"Failed to list blog prerequisites by blog id: {exc}"
+            ) from exc
 
     def list_by_blog_ids(self, blog_ids: list[str]) -> list:
         try:
