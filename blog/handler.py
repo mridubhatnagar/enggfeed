@@ -41,7 +41,6 @@ class BlogHandler:
         tags: list[str] | None,
         page: int,
         count: int,
-        is_signed_in: bool,
     ) -> PaginatedBlogs:
         source_ids = None
         tag_ids = None
@@ -86,10 +85,14 @@ class BlogHandler:
                 source_map[sid] = src.source
 
         tags_by_blog: dict[str, list[str]] = {str(bid): [] for bid in blog_ids_page}
-        prerequisites_by_blog: dict[str, list[str]] = {str(bid): [] for bid in blog_ids_page}
+        prerequisites_by_blog: dict[str, list[str]] = {
+            str(bid): [] for bid in blog_ids_page
+        }
 
-        if is_signed_in and blog_ids_page:
-            blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids(blog_ids_page)
+        if blog_ids_page:
+            blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids(
+                blog_ids_page
+            )
             all_tag_ids = list({row.tag_id for row in blog_tag_rows})
             if all_tag_ids:
                 tag_objects = self.tag_service.list_tags_by_ids(all_tag_ids)
@@ -106,13 +109,17 @@ class BlogHandler:
                 if _compute_content_tier(b.word_count) != ContentTier.LIMITED
             ]
             if eligible_blog_ids:
-                bp_rows = self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(
-                    eligible_blog_ids
+                bp_rows = (
+                    self.blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(
+                        eligible_blog_ids
+                    )
                 )
                 all_prereq_ids = list({row.prerequisite_id for row in bp_rows})
                 if all_prereq_ids:
-                    prereq_objects = self.prerequisite_service.list_prerequisites_by_ids(
-                        all_prereq_ids
+                    prereq_objects = (
+                        self.prerequisite_service.list_prerequisites_by_ids(
+                            all_prereq_ids
+                        )
                     )
                     prereq_id_to_name = {p.id: p.topic_name for p in prereq_objects}
                     for row in bp_rows:

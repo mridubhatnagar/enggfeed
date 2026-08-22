@@ -1,5 +1,4 @@
-from auth.utils import decode_jwt_token
-from exceptions import NotFoundError, UnauthorizedError
+from exceptions import NotFoundError
 from prerequisites.schemas import Primer, PrerequisiteDetail
 from prerequisites.service import PrerequisiteService
 from prompts.prerequisites import PREREQUISITES_PROMPT
@@ -10,13 +9,7 @@ class PrerequisiteHandler:
     def __init__(self, prerequisite_service: PrerequisiteService) -> None:
         self.prerequisite_service = prerequisite_service
 
-    def get_prerequisite(
-        self, topic_name: str, token: str | None
-    ) -> PrerequisiteDetail:
-        if not token:
-            raise UnauthorizedError("Authentication required")
-        decode_jwt_token(token)
-
+    def get_prerequisite(self, topic_name: str) -> PrerequisiteDetail:
         prereq = self.prerequisite_service.get_prerequisite_by_topic_name(topic_name)
         if prereq is None:
             raise NotFoundError(f"Prerequisite not found: {topic_name}")

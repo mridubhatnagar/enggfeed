@@ -10,16 +10,6 @@ class Config:
         "DATABASE_URI", ""
     )
     REDIS_URL: str = os.environ.get("REDIS_URL", "redis://redis:6379")
-    JWT_SECRET: str = os.environ.get("JWT_SECRET") or os.environ.get(
-        "JWT_SECRET_KEY", ""
-    )
-    JWT_ALGORITHM: str = os.environ.get("JWT_ALGORITHM", "HS256")
-    JWT_EXPIRY_HOURS: int = int(os.environ.get("JWT_EXPIRY_HOURS", "2"))
-    GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID", "")
-    GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET", "")
-    GOOGLE_REDIRECT_URI: str = os.environ.get("GOOGLE_REDIRECT_URI") or os.environ.get(
-        "GOOGLE_CALLBACK_URI", ""
-    )
     LLM_TIMEOUT_SECONDS: int = int(os.environ.get("LLM_TIMEOUT_SECONDS", "30"))
     SWAGGER_USERNAME: str = os.environ.get("SWAGGER_USERNAME", "")
     SWAGGER_PASSWORD: str = os.environ.get("SWAGGER_PASSWORD", "")

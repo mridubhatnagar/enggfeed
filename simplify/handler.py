@@ -1,10 +1,9 @@
 import uuid
 
-from auth.utils import decode_jwt_token
 from blog.schemas import BlogItem, ContentTier
 from blog.service import BlogService, BlogSourceService
 from constants import CONTENT_TIER_LIMITED_MAX_WORDS, CONTENT_TIER_PARTIAL_MAX_WORDS
-from exceptions import ForbiddenError, NotFoundError, RSSFeedError, UnauthorizedError
+from exceptions import ForbiddenError, NotFoundError, RSSFeedError
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.simplify import SIMPLIFY_PROMPT
 from rss_client import RSSClient
@@ -43,11 +42,7 @@ class SimplifyHandler:
         self.prerequisite_service = prerequisite_service
         self.rss_client = rss_client
 
-    def get_simplify(self, blog_id: str, token: str | None) -> SimplifyDetail:
-        if not token:
-            raise UnauthorizedError("Authentication required")
-        decode_jwt_token(token)
-
+    def get_simplify(self, blog_id: str) -> SimplifyDetail:
         blog = self.blog_service.get_blog_by_id(uuid.UUID(blog_id))
         if blog is None:
             raise NotFoundError(f"Blog not found: {blog_id}")

@@ -106,11 +106,6 @@ def simplify_page(blog_id: str):
     return FileResponse("templates/simplify.html")
 
 
-# [backend-auth] auth router
-from auth.controller import router as auth_router
-
-app.include_router(auth_router)
-
 # [backend-blog] blog router
 from blog.controller import router as blog_router
 

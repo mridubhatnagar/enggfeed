@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from blog.dao import BlogDAO, BlogSourceDAO
 from blog.service import BlogService, BlogSourceService
 from database import get_db
-from exceptions import DatabaseError, ForbiddenError, LLMUnreachableError, NotFoundError, RSSFeedError, UnauthorizedError
+from exceptions import (
+    DatabaseError,
+    ForbiddenError,
+    LLMUnreachableError,
+    NotFoundError,
+    RSSFeedError,
+)
 from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from rss_client import RSSClient
@@ -42,19 +48,11 @@ def get_simplify_handler(db: Session = Depends(get_db)) -> SimplifyHandler:
 @router.get("/api/v1/blogs/{blog_id}/simplify")
 def get_simplify(
     blog_id: str,
-    request: Request,
     handler: SimplifyHandler = Depends(get_simplify_handler),
 ):
-    token = request.cookies.get("access_token")
     try:
-        result = handler.get_simplify(blog_id=blog_id, token=token)
+        result = handler.get_simplify(blog_id=blog_id)
         return APIResponse(success=True, data=result, error=None)
-    except UnauthorizedError as exc:
-        return APIResponse(
-            success=False,
-            data=None,
-            error=ErrorDetail(code=401, message=str(exc)),
-        )
     except ForbiddenError as exc:
         return APIResponse(
             success=False,
