@@ -76,18 +76,18 @@ Decisions reached in discussion on 2026-08-21, not yet implemented. Context/reas
 
 ---
 
-## 6. Move daily ingest scheduling from GitHub Actions to AWS EventBridge
+## 6. Daily ingest scheduling — staying on GitHub Actions for now
 
-**Why:** `docs/deployment-aws.md` confirms the daily ingest cron (`.github/workflows/daily_ingest.yml`, `schedule: cron: '0 6 * * *'`) never actually ran in production — GitHub auto-disables scheduled workflows after 60 days of repo inactivity, and it was never re-enabled. Alternatives considered and ruled out:
+**Why:** `docs/deployment-aws.md` confirms the daily ingest cron (`.github/workflows/daily_ingest.yml`, `schedule: cron: '0 6 * * *'`) never actually ran in production — GitHub auto-disables scheduled workflows after 60 days of repo inactivity, and it was never re-enabled. Alternatives considered:
 - A plain crontab entry on the EC2 box — works, but the user finds Linux cron hard to manage/debug (no built-in logging/run history, silent failures).
-- An intentional filler commit every ~59 days to reset GitHub's inactivity clock — mechanically works (any repo activity resets it, not just workflow runs), but just relocates the problem to "remember to act every 59 days, forever, with no reminder system" — still fails silently if forgotten, and can't be self-automated via another scheduled GitHub Action without hitting the same 60-day disable rule.
-- A recurring Google Calendar reminder to prompt that filler commit — closes the "forgetting" gap, but still human-in-the-loop.
+- An intentional filler commit every ~59 days to reset GitHub's inactivity clock — mechanically works, but relocates the problem to "remember to act every 59 days, forever."
+- AWS EventBridge Scheduler — negligible cost, doesn't auto-disable. Originally decided on, but revisited: proper invocation-failure alerting for it means either an SQS dead-letter queue + CloudWatch Alarm, or Sentry Cron Monitoring — more moving parts than felt worth it right now.
 
-**Decision:** AWS EventBridge Scheduler. Cost is negligible at this volume (~365 invocations/year, effectively fractions of a cent, likely within free tier) and it doesn't silently disable itself the way GitHub Actions does — has a UI and run history instead.
+**Decision (revised):** Stay on GitHub Actions for now. The heavy commit activity from this session's work has reset the 60-day inactivity clock, so the schedule should actually fire going forward as long as the repo stays reasonably active. Revisit EventBridge (or Sentry Cron Monitoring) later if the workflow goes disabled again or if invocation-failure alerting becomes worth the setup.
 
-**What:** EventBridge Scheduler rule on a cron/rate expression, targeting an API destination that calls the ingest endpoint the same way GitHub Actions does today (`POST` to the ingest URL with the `x-ingest-secret` header). Once confirmed working, retire (or leave disabled as a manual-trigger-only fallback via `workflow_dispatch`) the `schedule:` trigger in `daily_ingest.yml`.
+**What:** No code change needed — just confirm `daily_ingest.yml`'s `schedule:` trigger is enabled in the GitHub Actions UI (Settings → Actions, or the workflow's own page) after the next push, since a long-disabled workflow sometimes needs a manual re-enable even after activity resumes.
 
-**Related, already-flagged issue to check while touching deploy infra:** `.github/workflows/deploy.yml` still SSHes into a DigitalOcean host (`DO_HOST`/`DO_USER`/`DO_SSH_KEY`) that `docs/deployment-aws.md` confirms was deleted after migrating to the current AWS EC2 instance — a push to `production` right now would fail at the deploy step. Worth fixing alongside this, not strictly part of the EventBridge move itself.
+**Related, already-flagged issue, still worth fixing regardless of scheduling approach:** `.github/workflows/deploy.yml` still SSHes into a DigitalOcean host (`DO_HOST`/`DO_USER`/`DO_SSH_KEY`) that `docs/deployment-aws.md` confirms was deleted after migrating to the current AWS EC2 instance — a push to `production` right now would fail at the deploy step.
 
 ---
 
