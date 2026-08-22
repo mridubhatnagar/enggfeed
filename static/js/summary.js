@@ -38,6 +38,9 @@
             const json = await res.json();
             if (json.success && json.data) {
               this.summaryDetail = json.data;
+            } else if (json.error?.code === 404) {
+              this.flashMessage = "Summary isn't available for this article yet. Please check back later.";
+              setTimeout(() => { this.flashMessage = ''; }, 6000);
             } else {
               this.flashMessage = 'Sorry, we are unable to process your request. Please try again after some time.';
               setTimeout(() => { this.flashMessage = ''; }, 6000);

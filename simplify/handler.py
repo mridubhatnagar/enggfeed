@@ -3,14 +3,11 @@ import uuid
 from blog.schemas import BlogItem, ContentTier
 from blog.service import BlogService, BlogSourceService
 from constants import CONTENT_TIER_LIMITED_MAX_WORDS, CONTENT_TIER_PARTIAL_MAX_WORDS
-from exceptions import ForbiddenError, NotFoundError, RSSFeedError
+from exceptions import ForbiddenError, NotFoundError
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
-from prompts.simplify import SIMPLIFY_PROMPT
-from rss_client import RSSClient
 from simplify.schemas import SimplifyContent, SimplifyDetail
 from simplify.service import SimplifyService
 from tags.service import BlogTagService, TagService
-from utils import call_llm
 
 
 def _compute_content_tier(word_count: int) -> ContentTier:
@@ -31,7 +28,6 @@ class SimplifyHandler:
         tag_service: TagService,
         blog_prerequisite_service: BlogPrerequisiteService,
         prerequisite_service: PrerequisiteService,
-        rss_client: RSSClient,
     ) -> None:
         self.blog_service = blog_service
         self.blog_source_service = blog_source_service
@@ -40,7 +36,6 @@ class SimplifyHandler:
         self.tag_service = tag_service
         self.blog_prerequisite_service = blog_prerequisite_service
         self.prerequisite_service = prerequisite_service
-        self.rss_client = rss_client
 
     def get_simplify(self, blog_id: str) -> SimplifyDetail:
         blog = self.blog_service.get_blog_by_id(uuid.UUID(blog_id))
@@ -54,19 +49,8 @@ class SimplifyHandler:
             )
 
         simplify_row = self.simplify_service.get_simplify_by_blog_id(blog_id)
-
         if simplify_row is None:
-            source = self.blog_source_service.get_source_by_id(blog.blog_source_id)
-            if source is None:
-                raise RSSFeedError(
-                    f"Blog source not found for id: {blog.blog_source_id}"
-                )
-            content_text = self.rss_client.get_content(source.rss_feed_link, blog.guid)
-
-            prompt = SIMPLIFY_PROMPT.format(title=blog.title, content=content_text)
-            llm_result = call_llm(prompt)
-            new_simplify = llm_result.get("simplify", "")
-            simplify_row = self.simplify_service.create_simplify(blog_id, new_simplify)
+            raise NotFoundError("Simplify not yet available for this article")
 
         blog_tag_rows = self.blog_tag_service.list_tag_ids_by_blog_ids(
             [uuid.UUID(blog_id)]

@@ -4,16 +4,9 @@ from sqlalchemy.orm import Session
 from blog.dao import BlogDAO, BlogSourceDAO
 from blog.service import BlogService, BlogSourceService
 from database import get_db
-from exceptions import (
-    DatabaseError,
-    ForbiddenError,
-    NotFoundError,
-    RSSFeedError,
-    LLMUnreachableError,
-)
+from exceptions import DatabaseError, ForbiddenError, NotFoundError
 from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
-from rss_client import RSSClient
 from schemas import APIResponse, ErrorDetail
 from summary.dao import SummaryDAO
 from summary.handler import SummaryHandler
@@ -41,7 +34,6 @@ def get_summary_handler(db: Session = Depends(get_db)) -> SummaryHandler:
         tag_service=TagService(tag_dao),
         blog_prerequisite_service=BlogPrerequisiteService(blog_prerequisite_dao),
         prerequisite_service=PrerequisiteService(prerequisite_dao),
-        rss_client=RSSClient(),
     )
 
 
@@ -64,18 +56,6 @@ def get_summary(
             success=False,
             data=None,
             error=ErrorDetail(code=404, message=str(exc)),
-        )
-    except RSSFeedError as exc:
-        return APIResponse(
-            success=False,
-            data=None,
-            error=ErrorDetail(code=502, message=str(exc)),
-        )
-    except LLMUnreachableError as exc:
-        return APIResponse(
-            success=False,
-            data=None,
-            error=ErrorDetail(code=502, message=str(exc)),
         )
     except DatabaseError as exc:
         return APIResponse(
