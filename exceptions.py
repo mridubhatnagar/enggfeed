@@ -2,15 +2,6 @@ class DatabaseError(Exception):
     """Raised by the DAO layer when a SQLAlchemy exception is caught."""
 
 
-class UnauthorizedError(Exception):
-    """Raised when no valid JWT is present."""
-
-
-class AuthError(Exception):
-    """Raised on OAuth flow failure (bad state, token exchange error, etc.)."""
-
-
-
 class ForbiddenError(Exception):
     """Raised when a content tier check fails."""
 

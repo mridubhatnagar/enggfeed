@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, make_transient, sessionmaker
 
 from config import settings
+from constants import CACHE_DEFAULT_TIMEOUT
 
 engine = create_engine(settings.DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -22,9 +23,6 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
-
-
-_DEFAULT_TIMEOUT = settings.REFRESH_INTERVAL_DAYS * 86400
 
 
 class Cache:
@@ -54,7 +52,12 @@ class Cache:
     def make_key(prefix: str, *args) -> str:
         return f"{prefix}:{':'.join(str(a) for a in args)}"
 
-    def cached(self, timeout: int = _DEFAULT_TIMEOUT, key_prefix: str | None = None, unless=None):
+    def cached(
+        self,
+        timeout: int = CACHE_DEFAULT_TIMEOUT,
+        key_prefix: str | None = None,
+        unless=None,
+    ):
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
@@ -84,7 +87,12 @@ class Cache:
 
         return decorator
 
-    def set(self, key_prefix: str, timeout: int = _DEFAULT_TIMEOUT, key_args: tuple = (0,)):
+    def set(
+        self,
+        key_prefix: str,
+        timeout: int = CACHE_DEFAULT_TIMEOUT,
+        key_args: tuple = (0,),
+    ):
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):

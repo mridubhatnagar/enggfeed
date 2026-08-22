@@ -4,7 +4,6 @@
 
 | Class | Module | File |
 |-------|--------|------|
-| UserDAO, UserService | auth/ | dao.py, service.py |
 | BlogDAO, BlogService | blog/ | dao.py, service.py |
 | BlogSourceDAO, BlogSourceService | blog/ | dao.py, service.py |
 | SummaryDAO, SummaryService | summary/ | dao.py, service.py |
@@ -22,30 +21,6 @@
 **SQLAlchemy convention:** All concrete DAO classes accept `db: Session` (SQLAlchemy session) in their constructor — injected via FastAPI's `Depends(get_db)`. The abstract interface does not declare `__init__`. DAOs use `self.db` to execute queries. `find_similar` methods use pgvector's `<=>` cosine distance operator via `sqlalchemy_pgvector`. Return type is `tuple[T | None, float | None]` — `(match, score)` where score is the cosine similarity of the closest existing item; `(None, score)` if closest item was below threshold; `(None, None)` if no existing items in DB.
 
 ---
-
-### User
-
-```python
-class IUserDAO(ABC):
-    @abstractmethod
-    def get_by_id(self, user_id: uuid.UUID): ...
-
-    @abstractmethod
-    def get_by_google_auth_id(self, google_auth_id: str): ...
-
-    @abstractmethod
-    def create(self, google_auth_id: str, name: str, email: str, profile_url: str): ...
-
-
-class UserDAO(IUserDAO):
-    def __init__(self, db: Session): ...
-    def get_by_id(self, user_id: uuid.UUID): ...
-    def get_by_google_auth_id(self, google_auth_id: str): ...
-    def create(self, google_auth_id: str, name: str, email: str, profile_url: str): ...
-```
-
----
-
 
 ### BlogSource
 
@@ -278,39 +253,17 @@ class BlogPrerequisiteDAO(IBlogPrerequisiteDAO):
 ```python
 class IFeedbackDAO(ABC):
     @abstractmethod
-    def get_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
-
-    @abstractmethod
-    def create(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
-
-    @abstractmethod
-    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+    def create(self, blog_id: uuid.UUID, type: str, content: str, name: str | None, email: str | None): ...
 
 
 class FeedbackDAO(IFeedbackDAO):
     def __init__(self, db: Session): ...
-    def get_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
-    def create(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
-    def update(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+    def create(self, blog_id: uuid.UUID, type: str, content: str, name: str | None, email: str | None): ...
 ```
 
 ---
 
 ## Service Classes
-
----
-
-### User
-
-```python
-class UserService:
-    def __init__(self, dao: IUserDAO): ...
-    def get_user_by_id(self, user_id: uuid.UUID): ...
-    def get_user_by_auth_id(self, google_auth_id: str): ...
-    def create_user(self, google_auth_id: str, name: str, email: str, profile_url: str): ...
-```
-
----
 
 ---
 
@@ -413,9 +366,7 @@ class PrerequisiteService:
 ```python
 class FeedbackService:
     def __init__(self, dao: IFeedbackDAO): ...
-    def get_feedback_by_user_blog_type(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str): ...
-    def create_feedback(self, blog_id: uuid.UUID, user_id: uuid.UUID, type: str, content: str): ...
-    def update_feedback(self, user_id: uuid.UUID, blog_id: uuid.UUID, type: str, content: str): ...
+    def create_feedback(self, blog_id: uuid.UUID, type: str, content: str, name: str | None, email: str | None): ...
 ```
 
 ---
