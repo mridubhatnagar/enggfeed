@@ -112,7 +112,7 @@ enggsystemfeed/
 - JWT payload: `user_id` only — minimal, no sensitive data exposed
 - JWT expiry: 2 hours — no silent refresh, user is forced to log in again on expiry
 - Name and avatar fetched from DB using `user_id` when needed
-- Email stored in DB only — for future allowlist-based access control
+- Email stored in DB — no access-control use today. There is no allowlist gate: any Google account that completes OAuth is signed in (the `allowed_users` table and its gate were built, then removed — see `docs/v1.2_features.md` → "Remove allowed_users — Open to Public")
 
 ## Caching
 - Redis for caching layer
@@ -275,17 +275,20 @@ Custom exceptions live in `exceptions.py` at project root.
 class DatabaseError(Exception): ...       # DAO layer — wraps SQLAlchemy exceptions
 class UnauthorizedError(Exception): ...   # No valid JWT present
 class AuthError(Exception): ...           # OAuth flow failure (bad state, token exchange error, etc.)
-class NotAllowedError(AuthError): ...     # Authenticated user's email not in allowlist
 class ForbiddenError(Exception): ...      # Content tier check failed
 class NotFoundError(Exception): ...       # Record not found
 class RSSFeedError(Exception): ...        # RSS feed unavailable
 class LLMUnreachableError(Exception): ... # LLM call failed
 class RateLimitError(Exception): ...      # Rate limit exceeded
+class ValidationError(Exception): ...     # Request content fails server-side validation (e.g. feedback length)
+class FeedbackError(Exception): ...       # Feedback submission failed unexpectedly
 ```
+
+**Note:** `NotAllowedError` (email not in allowlist) no longer exists — removed along with the `allowed_users` gate.
 
 **Layer responsibilities:**
 - **DAO** — catches SQLAlchemy exceptions, re-raises as `DatabaseError`
-- **Handler** — raises business logic exceptions (`NotFoundError`, `ForbiddenError`, `AuthError`, `UnauthorizedError`, `RSSFeedError`, `LLMUnreachableError`). Lets `DatabaseError` propagate.
+- **Handler** — raises business logic exceptions (`NotFoundError`, `ForbiddenError`, `AuthError`, `UnauthorizedError`, `RSSFeedError`, `LLMUnreachableError`, `RateLimitError`, `ValidationError`, `FeedbackError`). Lets `DatabaseError` propagate.
 - **Controller** — catches all exceptions, converts to `APIResponse(success=False, data=None, error=ErrorDetail(code=..., message=...))` with appropriate HTTP status code
 
 **HTTP status code mapping:**

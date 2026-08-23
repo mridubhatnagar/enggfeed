@@ -57,8 +57,11 @@ For each module, work through these five questions:
 - `verify_id_token(id_token: str) -> dict` — verifies audience, checks `email_verified`, returns decoded claims
 
 **`auth/utils.py`**
-- `generate_jwt_token(user_id: int) -> str`
-- `decode_jwt_token(token: str) -> dict` — lives in `auth/utils.py`; imported from there by all modules that need to verify JWT
+- `generate_jwt_token(user_id: uuid.UUID) -> str`
+- `decode_jwt_token(token: str) -> dict` — lives in `auth/utils.py`; imported from there by all modules that need to verify JWT. Raises `UnauthorizedError` if invalid or expired.
+- `is_authenticated(token: str | None) -> bool` — returns `True` if the token is present and valid, `False` otherwise (swallows `UnauthorizedError`). Used by `blog/controller.py` to compute `is_signed_in` without raising on guest requests.
+
+**Convention:** Controllers extract the JWT cookie value themselves (`request.cookies.get("access_token")`) and pass a plain `token: str | None` into the handler. Handlers never take `Request`/`Response` — they call `decode_jwt_token(token)` on the plain string.
 
 ---
 
@@ -67,41 +70,41 @@ For each module, work through these five questions:
 **Constructor dependencies:**
 - `auth_client: AuthClient`
 - `user_service: UserService`
-- `allowed_user_service: AllowedUserService`
+
+**Note:** There is no allowlist gate — the `allowed_users` table was dropped (`alembic/versions/9da7f10dbd4f_drop_allowed_users_table.py`). Any Google account that completes OAuth successfully is signed in.
 
 ---
 
-#### `initiate(response: Response) -> str`
+#### `initiate() -> tuple[str, str]`
+Returns `(state, auth_url)` — no params, does not touch cookies itself.
 Happy path:
-1. `create_and_store_state_token()` — generate state token, store in HttpOnly cookie
+1. Generate a state token (`secrets.token_urlsafe(32)`)
 2. `auth_client.get_auth_url(state)` — build Google OAuth URL
-3. Return URL to frontend
+3. Return `(state, auth_url)` — the **controller** sets the `oauth_state` HttpOnly cookie from `state` and returns `auth_url` in the JSON response body (the frontend does the redirect — this endpoint does not itself 302).
 
 ---
 
-#### `callback(code: str, state: str, request: Request, response: Response) -> str`
+#### `callback(code: str, state: str, stored_state: str | None) -> str`
+Returns the JWT token string — the **controller** sets it as the `access_token` HttpOnly cookie and issues the redirect.
 Happy path:
-1. `verify_state_token(state, request)` — compare query param against cookie; delete cookie after
+1. Compare `stored_state` (read from the `oauth_state` cookie by the controller) against `state` (query param) — raise `AuthError` on mismatch
 2. `auth_client.exchange_code(code)` — call Google token endpoint, get ID token
-3. `auth_client.verify_id_token(id_token)` — verify audience + `email_verified`, extract email + `google_auth_id`
-4. `allowed_user_service.get_allowed_user_by_email(email)` — if None, reject
-5. `user_service.get_user_by_auth_id(google_auth_id)` — check if returning user
-6. If None → `user_service.create_user(...)` — insert new row
-7. `generate_jwt_token(user_id)` — store in HttpOnly cookie
-8. Return success
+3. `auth_client.verify_id_token(id_token)` — verify audience + `email_verified`, extract email + `google_auth_id` + `name` + `picture`
+4. `user_service.get_user_by_auth_id(google_auth_id)` — check if returning user
+5. If None → `user_service.create_user(...)` — insert new row
+6. `generate_jwt_token(user_id)` — return the token string
 
 Edge cases:
-- State mismatch → reject
-- `email_verified` false → reject
-- Email not in allowlist → reject
+- State mismatch → `AuthError` → controller redirects to `/?error=auth_failed`
 
 ---
 
-#### `me(request: Request) -> UserDetail`
+#### `me(token: str | None) -> UserDetail`
 Happy path:
-1. `decode_jwt_token(token)` — extract `user_id` from JWT cookie
-2. `user_service.get_user_by_id(user_id)` — fetch name, profile_url
-3. Return to controller
+1. If `token` is falsy → raise `UnauthorizedError`
+2. `decode_jwt_token(token)` — extract `user_id` from the payload
+3. `user_service.get_user_by_id(user_id)` — fetch name, profile_url; raise `NotFoundError` if missing
+4. Return `UserDetail`
 
 ---
 
@@ -119,31 +122,40 @@ Happy path:
 
 ---
 
-#### `get_blogs(sources: list[str] | None, tags: list[str] | None, page, count, request) -> PaginatedBlogs`
+#### `get_blogs(sources: list[str] | None, tags: list[str] | None, page: int, count: int, is_signed_in: bool) -> PaginatedBlogs`
+`sources`/`tags` are multi-select — the **controller** parses comma-separated `source`/`tag` query params into these lists and resolves `is_signed_in` via `is_authenticated(request.cookies.get("access_token"))` before calling the handler. The handler itself takes no `Request`.
+
 Happy path:
-1. `decode_jwt_token(request)` — if JWT present, set `is_signed_in = True`
-2. If `source` present → `blog_source_service.get_source_by_name(source)` → `source_id`
-3. If `tag` present → `tag_service.get_tag_by_name(tag)` → `tag_id`
-4. `blog_service.list_blogs(source_id, tag_id, page, count)` — DAO builds dynamic query based on present params
-5. Compute `content_tier` for each blog from `word_count` (`limited` < 150, `partial` 150–300, `full` 300+)
-6. If `is_signed_in`:
+1. For each name in `sources` → `blog_source_service.get_source_by_name(name)` → collect resolved `source_id`s (skip unknown names)
+2. For each name in `tags` → `tag_service.get_tag_by_name(name)` → collect resolved `tag_id`s; if `tags` was non-empty but nothing resolved, short-circuit and return an empty `PaginatedBlogs`
+3. `blog_service.list_blogs(source_ids, tag_ids, None, page, count)` / `count_blogs(...)` — DAO uses `IN` clauses for multi-select
+4. Compute `content_tier` for each blog from `word_count` (`LIMITED` < 150, `PARTIAL` 150–300, `FULL` 300+)
+5. If `is_signed_in` and there are blogs on the page:
    - `blog_tag_service.list_tag_ids_by_blog_ids(blog_ids)` → tag_ids per blog
    - `tag_service.list_tags_by_ids(tag_ids)` → tag names
-   - Filter to `partial` and `full` tier blog_ids only → `eligible_blog_ids`
+   - Filter to non-`LIMITED` tier blog_ids only → `eligible_blog_ids`
    - `blog_prerequisite_service.list_prerequisite_ids_by_blog_ids(eligible_blog_ids)` → prerequisite_ids per blog
    - `prerequisite_service.list_prerequisites_by_ids(prerequisite_ids)` → prerequisite rows (topic names + ids)
-   - Attach tags and prerequisites to each blog (prerequisites empty array for `limited` tier)
-7. Return enriched list. Server-side pagination applies via `page` and `count`.
+   - Attach tags and prerequisites to each blog (both stay empty arrays if not signed in, or for `LIMITED` tier)
+6. Return enriched list. Server-side pagination applies via `page` and `count`.
 
 Edge cases:
-- Guest user → tags and prerequisites are empty arrays
-- `tag` param present but not found → empty result
+- Guest user (`is_signed_in=False`) → tags and prerequisites are empty arrays
+- `tags` param present but none resolve to a known tag → empty result (`total=0`)
+- `sources` param present but none resolve → treated as "no source filter" (falls back to `None`), not an empty result
 
 ---
 
 #### `get_sources() -> list[BlogSource]`
 Happy path:
 1. `blog_source_service.list_all_sources()` → return list
+
+---
+
+#### `get_tags() -> list[TagWithCount]`
+Happy path:
+1. `tag_service.list_all_tags_with_counts()` → list of `(Tag, count)` tuples, ordered by count descending
+2. Map to `TagWithCount(tag=tag.tag, count=count)` per row
 
 ---
 
@@ -163,12 +175,12 @@ Happy path:
 
 ---
 
-#### `get_summary(blog_id: str, request: Request) -> SummaryDetail`
+#### `get_summary(blog_id: str, token: str | None) -> SummaryDetail`
 **Invariant:** A `summary` row is never created at ingest time. The `summary` table is populated only on first user request. Do not add any code path that assumes a `summary` row exists for a blog that has been ingested.
 
 Happy path:
-1. `decode_jwt_token(request)` — reject if no valid JWT
-2. `blog_service.get_blog_by_blog_id(blog_id)` — fetch title, link, thumbnail, word_count, blog_source_id, guid
+1. If `token` is falsy → raise `UnauthorizedError`; else `decode_jwt_token(token)`
+2. `blog_service.get_blog_by_id(uuid.UUID(blog_id))` — fetch title, link, thumbnail, word_count, blog_source_id, guid; raise `NotFoundError` if missing
 3. Compute `content_tier` from `word_count` — return `403` if `limited`
 4. `summary_service.get_summary_by_blog_id(blog_id)` — cache → DB
 5. `check_refresh_due(updated_at)` (from `utils.py`) — if stale or not found:
@@ -206,11 +218,11 @@ Edge cases:
 
 ---
 
-#### `get_simplify(blog_id: str, request: Request) -> SimplifyDetail`
+#### `get_simplify(blog_id: str, token: str | None) -> SimplifyDetail`
 **Invariant:** A `simplify` row is never created at ingest time. The `simplify` table is populated only on first user request. Do not add any code path that assumes a `simplify` row exists for a blog that has been ingested.
 Happy path:
-1. `decode_jwt_token(request)` — reject if no valid JWT
-2. `blog_service.get_blog_by_blog_id(blog_id)` — fetch title, link, thumbnail, word_count, blog_source_id, guid
+1. If `token` is falsy → raise `UnauthorizedError`; else `decode_jwt_token(token)`
+2. `blog_service.get_blog_by_id(uuid.UUID(blog_id))` — fetch title, link, thumbnail, word_count, blog_source_id, guid; raise `NotFoundError` if missing
 3. Compute `content_tier` from `word_count` — return `403` if `limited` or `partial`
 4. `simplify_service.get_simplify_by_blog_id(blog_id)` — cache → DB
 5. `check_refresh_due(updated_at)` (from `utils.py`) — if stale or not found:
@@ -241,10 +253,10 @@ Edge cases:
 
 ---
 
-#### `get_prerequisite(topic_name: str, request: Request) -> PrerequisiteDetail`
+#### `get_prerequisite(topic_name: str, token: str | None) -> PrerequisiteDetail`
 Happy path:
-1. `decode_jwt_token(request)` — reject if no valid JWT
-2. `prerequisite_service.get_prerequisite_by_topic_name(topic_name)` — cache → DB
+1. If `token` is falsy → raise `UnauthorizedError`; else `decode_jwt_token(token)`
+2. `prerequisite_service.get_prerequisite_by_topic_name(topic_name)` — cache → DB; raise `NotFoundError` if the row itself doesn't exist
 3. If `content` is None or `check_refresh_due(updated_at)` (from `utils.py`) is stale:
    - `call_llm(prompt)` with prompt from `prompts/prerequisites.py` — returns dict `{"definition": "...", "why_it_matters": "...", "example": "...", "deep_dive": "..."}`
    - `prerequisite_service.update_prerequisite(topic_name, content)` — update DB, update cache
@@ -311,17 +323,15 @@ Edge cases:
 
 ---
 
-#### `submit_feedback(blog_id: uuid.UUID, type: FeedbackType, content: str, request: Request) -> None`
+#### `submit_feedback(blog_id: uuid.UUID, type: FeedbackType, content: str, token: str | None) -> APIResponse`
 Happy path:
-1. `decode_jwt_token(request)` — reject if no valid JWT, extract `user_id`
-2. Check per-minute rate limit — Redis key `feedback:{user_id}:minute:{minute}` (TTL 60s), increment and check against `FEEDBACK_RATE_LIMIT_PER_MINUTE` from `constants.py`. If exceeded → raise `RateLimitError` (429)
-3. Check per-day rate limit — Redis key `feedback:{user_id}:{date}`, increment and check against `FEEDBACK_RATE_LIMIT_PER_DAY` from `constants.py`. If exceeded → raise `RateLimitError` (429)
-4. Strip `content` — if empty after stripping → return without inserting
+1. If `token` is falsy → raise `UnauthorizedError`; else `decode_jwt_token(token)`, extract `user_id`
+2. Check per-minute rate limit — Redis key `feedback:{user_id}:minute:{YYYYMMDDHHMM}` (TTL 60s), increment and check against `FEEDBACK_RATE_LIMIT_PER_MINUTE` from `constants.py`. If exceeded → raise `RateLimitError` (429)
+3. Check per-day rate limit — Redis key `feedback:{user_id}:{YYYYMMDD}`, increment and check against `FEEDBACK_RATE_LIMIT_PER_DAY` from `constants.py`. If exceeded → raise `RateLimitError` (429)
+4. Strip `content` — if empty after stripping → return `APIResponse(success=True, ...)` without inserting
 5. Validate `content` length — min 10 chars, max 500 chars → raise `ValidationError` if out of range
-6. `feedback_service.get_feedback_by_user_blog_type(user_id, blog_id, type)` — check if row exists
-   - If exists → `feedback_service.update_feedback(user_id, blog_id, type, content)`
-   - If not → `feedback_service.create_feedback(blog_id, user_id, type, content)`
-7. Return None
+6. `feedback_service.create_or_update(user_id, blog_id, type, content)` — service internally looks up the existing row via `get_feedback_by_user_blog_type` and calls `update_feedback` (passing the row object) if found, else `create_feedback`
+7. Return `APIResponse(success=True, data=None, error=None)`
 
 Edge cases:
 - No JWT → reject with 401
