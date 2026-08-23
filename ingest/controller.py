@@ -1,6 +1,8 @@
+import logging
 import secrets
 
-from fastapi import APIRouter, Header
+import sentry_sdk
+from fastapi import APIRouter, BackgroundTasks, Header
 from fastapi.responses import JSONResponse
 
 from blog.dao import BlogDAO, BlogSourceDAO
@@ -22,23 +24,15 @@ from summary.service import SummaryService
 from tags.dao import BlogTagDAO, TagDAO
 from tags.service import BlogTagService, TagService
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
-@router.post("/api/v1/ingest", include_in_schema=False)
-def trigger_ingest(x_ingest_secret: str = Header(default="")):
-    if not settings.INGEST_SECRET or not secrets.compare_digest(
-        x_ingest_secret, settings.INGEST_SECRET
-    ):
-        return JSONResponse(
-            status_code=401,
-            content={
-                "success": False,
-                "data": None,
-                "error": {"code": 401, "message": "Unauthorized"},
-            },
-        )
-
+def _run_ingest_job() -> None:
+    """Build dependencies and run the ingest pipeline. Runs as a background task,
+    after the HTTP response has already been sent — errors have no request to
+    propagate to, so they're captured to Sentry and logged instead."""
     db = SessionLocal()
     try:
         handler = IngestHandler(
@@ -55,7 +49,28 @@ def trigger_ingest(x_ingest_secret: str = Header(default="")):
             llm_usage_service=LLMUsageService(LLMUsageDAO(db)),
         )
         handler.trigger_job()
+    except Exception as exc:
+        sentry_sdk.capture_exception(exc)
+        logger.error("Ingest job failed: %s", exc, exc_info=True)
     finally:
         db.close()
 
-    return APIResponse(success=True, data={"message": "Ingest complete"}, error=None)
+
+@router.post("/api/v1/ingest", include_in_schema=False)
+def trigger_ingest(
+    background_tasks: BackgroundTasks, x_ingest_secret: str = Header(default="")
+):
+    if not settings.INGEST_SECRET or not secrets.compare_digest(
+        x_ingest_secret, settings.INGEST_SECRET
+    ):
+        return JSONResponse(
+            status_code=401,
+            content={
+                "success": False,
+                "data": None,
+                "error": {"code": 401, "message": "Unauthorized"},
+            },
+        )
+
+    background_tasks.add_task(_run_ingest_job)
+    return APIResponse(success=True, data={"message": "Ingest started"}, error=None)

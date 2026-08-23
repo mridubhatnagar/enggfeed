@@ -33,3 +33,17 @@
    - Also fixes a second latent issue surfaced along the way: lazy generation meant the first user to request a given summary/simplify ate a synchronous multi-second LLM call before the page rendered — worse once sign-in (which gated this feature) is potentially removed, since there's no friction to make a user wait through it.
 
 **Lesson:** "Fetch on demand, never store" only works if the upstream source retains the data indefinitely. RSS feeds don't — they're a rolling window, not an archive. Any on-demand fetch keyed against a live feed needs either a fallback source or a policy for content that's aged out. Also: caching hides staleness on repeat reads, but never protects the first read of something — the fix for a first-read problem has to change *when* work happens, not how long the result is kept afterward.
+
+---
+
+## Daily ingest cron reported failure despite ingest actually succeeding
+
+**Symptom:** `daily_ingest.yml` (GitHub Actions) reported a failed run — the `curl` step got a `504` — even though the ingest pipeline had actually completed successfully server-side (confirmed via the blog count in `GET /api/v1/blogs` increasing after the "failed" run).
+
+**Root cause:** `POST /api/v1/ingest` ran the entire pipeline synchronously — fetching every RSS source, then for each new article making sequential LLM calls (tag/prerequisite extraction, summary, simplify) plus an embedding call per tag/prerequisite. Across 13 sources this routinely took several minutes, well past the reverse-proxy's timeout (nginx/Cloudflare in front of the AWS EC2 instance, ~60-100s). The proxy returned `504` to the GitHub Actions runner and killed the connection, but the FastAPI request handler kept running server-side to completion — the client-visible failure and the actual server-side outcome were decoupled.
+
+**Fix:** Made the endpoint asynchronous via FastAPI's built-in `BackgroundTasks` — `trigger_ingest` now only validates the `x-ingest-secret` header and schedules `IngestHandler.trigger_job()` as a background task, returning `{"message": "Ingest started"}` in milliseconds regardless of how long the actual pipeline takes. Verified locally: response time dropped from several minutes (blocking) to ~0.016s, while the scheduled job continued running and completing normally afterward. Chose `BackgroundTasks` over a full queue (Celery/RQ) since there's exactly one async job type on one instance — the added operational complexity of a broker + worker process buys nothing at this scale.
+
+**Tradeoff accepted:** GitHub Actions' pass/fail status now only reflects "was the job scheduled," not "did ingest actually succeed." A `200` no longer means the pipeline completed without errors. Background job failures are caught in `ingest/controller.py` (`_run_ingest_job`) and reported to Sentry instead of failing the HTTP response — Sentry is now the source of truth for real ingest failures, not the Actions run status.
+
+**Lesson:** A synchronous endpoint that does meaningfully slow work (multiple sequential external API calls) behind a reverse proxy will eventually collide with the proxy's timeout, and the failure it produces (a client-side `504`) says nothing about whether the work actually succeeded. When a job's duration is unbounded and its trigger doesn't need to wait for the result — like a cron-triggered pipeline — decouple the HTTP response from the work itself rather than trying to outrun the timeout.

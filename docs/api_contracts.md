@@ -368,15 +368,17 @@ class FeedbackRequest(BaseModel):
 - Not listed in Swagger UI (`include_in_schema=False`)
 - Authenticated via `x-ingest-secret` header — validated against `INGEST_SECRET` env var using `secrets.compare_digest`
 - Returns `401` if header is missing or does not match
+- **Asynchronous:** the actual ingest pipeline (`IngestHandler.trigger_job()`) runs as a FastAPI `BackgroundTasks` job, scheduled *after* the response is sent. The endpoint itself only validates the secret and schedules the job — it returns in milliseconds regardless of how long the pipeline takes, so the reverse-proxy timeout that used to cause spurious `504`s on this endpoint no longer applies.
+- **Failure visibility:** because the response returns before the job runs, a `200` only means "the job was scheduled," not "the job succeeded." Errors during the background job are caught, logged, and reported to Sentry (`ingest/controller.py` → `_run_ingest_job`) — GitHub Actions' pass/fail status no longer reflects whether ingest actually completed successfully. Check Sentry for real failures, not the Actions run status.
 
 **Headers:**
 | Header | Description |
 |--------|-------------|
 | x-ingest-secret | Shared secret matching `INGEST_SECRET` env var |
 
-**Response (success):** `APIResponse[None]`
+**Response (success):** `APIResponse[dict]`
 ```json
-{ "success": true, "data": null, "error": null }
+{ "success": true, "data": { "message": "Ingest started" }, "error": null }
 ```
 
 **Response (unauthorized):**
