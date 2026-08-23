@@ -9,7 +9,9 @@ FEEDBACK_RATE_LIMIT_PER_MINUTE = 2
 FEEDBACK_RATE_LIMIT_PER_DAY = 5
 FEEDBACK_MIN_LENGTH = 10
 FEEDBACK_MAX_LENGTH = 500
-ANTHROPIC_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_MODEL = (
+    "global.anthropic.claude-sonnet-4-6"  # Bedrock global inference profile ID
+)
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_INPUT_COST_PER_MILLION_TOKENS = 3.00  # claude-sonnet-4-6
 LLM_OUTPUT_COST_PER_MILLION_TOKENS = 15.00  # claude-sonnet-4-6

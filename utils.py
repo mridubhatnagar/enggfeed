@@ -21,8 +21,8 @@ def call_llm(
     {"input_tokens": int, "output_tokens": int}.
     """
     effective_timeout = timeout if timeout is not None else settings.LLM_TIMEOUT_SECONDS
-    client = anthropic.Anthropic(
-        api_key=settings.ANTHROPIC_API_KEY,
+    client = anthropic.AnthropicBedrock(
+        aws_region=settings.AWS_REGION,
         timeout=effective_timeout,
     )
     try:

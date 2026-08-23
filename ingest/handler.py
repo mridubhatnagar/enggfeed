@@ -406,7 +406,7 @@ class IngestHandler:
         self.llm_usage_service.create_llm_usage(
             blog_id=blog_id,
             call_type=call_type.value,
-            provider="anthropic",
+            provider="bedrock",
             model=ANTHROPIC_MODEL,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
