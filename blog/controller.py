@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from auth.utils import is_authenticated
 from blog.dao import BlogDAO, BlogSourceDAO
 from blog.handler import BlogHandler
 from blog.service import BlogService, BlogSourceService
@@ -36,7 +35,6 @@ def get_blog_handler(db: Session = Depends(get_db)) -> BlogHandler:
 
 @router.get("/api/v1/blogs")
 def get_blogs(
-    request: Request,
     source: str | None = None,
     tag: str | None = None,
     page: int = 1,
@@ -46,15 +44,12 @@ def get_blogs(
     sources = [s.strip() for s in source.split(",") if s.strip()] if source else None
     tags = [t.strip() for t in tag.split(",") if t.strip()] if tag else None
 
-    is_signed_in = is_authenticated(request.cookies.get("access_token"))
-
     try:
         result = handler.get_blogs(
             sources=sources,
             tags=tags,
             page=page,
             count=count,
-            is_signed_in=is_signed_in,
         )
         return APIResponse(success=True, data=result, error=None)
     except DatabaseError as exc:

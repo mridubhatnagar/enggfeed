@@ -1,25 +1,20 @@
-from auth.utils import decode_jwt_token
-from exceptions import NotFoundError, UnauthorizedError
+from exceptions import NotFoundError
 from prerequisites.schemas import Primer, PrerequisiteDetail
 from prerequisites.service import PrerequisiteService
 from prompts.prerequisites import PREREQUISITES_PROMPT
-from utils import call_llm, check_refresh_due
+from utils import call_llm
 
 
 class PrerequisiteHandler:
     def __init__(self, prerequisite_service: PrerequisiteService) -> None:
         self.prerequisite_service = prerequisite_service
 
-    def get_prerequisite(self, topic_name: str, token: str | None) -> PrerequisiteDetail:
-        if not token:
-            raise UnauthorizedError("Authentication required")
-        decode_jwt_token(token)
-
+    def get_prerequisite(self, topic_name: str) -> PrerequisiteDetail:
         prereq = self.prerequisite_service.get_prerequisite_by_topic_name(topic_name)
         if prereq is None:
             raise NotFoundError(f"Prerequisite not found: {topic_name}")
 
-        if prereq.content is None or check_refresh_due(prereq.updated_at):
+        if prereq.content is None:
             prompt = PREREQUISITES_PROMPT.format(topic_name=topic_name)
             llm_result = call_llm(prompt)
             new_content = {
@@ -28,7 +23,9 @@ class PrerequisiteHandler:
                 "example": llm_result.get("example", ""),
                 "deep_dive": llm_result.get("deep_dive", ""),
             }
-            prereq = self.prerequisite_service.update_prerequisite(topic_name, new_content)
+            prereq = self.prerequisite_service.update_prerequisite(
+                topic_name, new_content
+            )
 
         content = prereq.content
         primer = Primer(

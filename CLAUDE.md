@@ -87,7 +87,10 @@ enggsystemfeed/
 │   ├── __init__.py
 │   ├── controller.py
 │   ├── handler.py
-│   └── embedder.py
+│   ├── embedder.py
+│   ├── models.py
+│   ├── dao.py
+│   └── service.py
 ├── prompts/
 │   ├── __init__.py
 │   ├── summary.py
@@ -114,7 +117,7 @@ enggsystemfeed/
 | `simplify/` | ELI5 generation, 7-day refresh logic, cache management |
 | `tags/` | Tag lookup by name, tag filtering on feed. Owns `Tag` and `BlogTag` DAO and Service |
 | `prerequisites/` | On-demand prerequisite explanation generation, 7-day refresh logic, cache management. Owns `Prerequisite` and `BlogPrerequisite` DAO and Service |
-| `ingest/` | RSS polling, og:image scraping, embedding, storing articles, tagging pipeline, prerequisites extraction. Exposes `POST /api/v1/ingest` endpoint triggered by GitHub Actions daily cron |
+| `ingest/` | RSS polling, og:image scraping, embedding, storing articles, tagging pipeline, prerequisites extraction, per-call LLM/embedding cost tracking. Owns `LLMUsage` DAO and Service. Exposes `POST /api/v1/ingest` endpoint triggered by GitHub Actions daily cron |
 | `feedback/` | User feedback submission for tags, prerequisites, summary, and simplify. Rate limiting via Redis. Exposes `POST /api/v1/feedback` endpoint |
 | `prompts/` | All LLM prompt templates — `summary.py`, `simplify.py`, `prerequisites.py`, `ingest.py` |
 

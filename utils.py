@@ -1,31 +1,24 @@
 import json
-from datetime import datetime, timedelta, timezone
 
 import anthropic
 import openai
 
 from config import settings
-from constants import REFRESH_INTERVAL_DAYS
+from constants import ANTHROPIC_MODEL
 from exceptions import LLMUnreachableError
 
 
-def check_refresh_due(updated_at: datetime | None) -> bool:
-    """Return True if updated_at is None or older than REFRESH_INTERVAL_DAYS."""
-    if updated_at is None:
-        return True
-    cutoff = datetime.now(tz=timezone.utc) - timedelta(days=REFRESH_INTERVAL_DAYS)
-    # Make updated_at timezone-aware if it is naive
-    if updated_at.tzinfo is None:
-        updated_at = updated_at.replace(tzinfo=timezone.utc)
-    return updated_at < cutoff
-
-
-def call_llm(prompt: str, timeout: int | None = None) -> dict:
+def call_llm(
+    prompt: str, timeout: int | None = None, return_usage: bool = False
+) -> dict | tuple[dict, dict]:
     """Call the LLM and return the parsed JSON response as a dict.
 
     Strips markdown code fences (```json / ```) before parsing.
     Raises LLMUnreachableError on failure, timeout, or invalid JSON.
     Default timeout from config.
+
+    If return_usage is True, returns (result, usage) where usage is
+    {"input_tokens": int, "output_tokens": int}.
     """
     effective_timeout = timeout if timeout is not None else settings.LLM_TIMEOUT_SECONDS
     client = anthropic.Anthropic(
@@ -34,7 +27,7 @@ def call_llm(prompt: str, timeout: int | None = None) -> dict:
     )
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=ANTHROPIC_MODEL,
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
             system="Return only valid JSON. Do not include any explanation or prose outside the JSON object.",
@@ -57,9 +50,18 @@ def call_llm(prompt: str, timeout: int | None = None) -> dict:
         raw = "\n".join(lines).strip()
 
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise LLMUnreachableError(f"LLM returned invalid JSON: {exc}") from exc
+
+    if not return_usage:
+        return result
+
+    usage = {
+        "input_tokens": message.usage.input_tokens,
+        "output_tokens": message.usage.output_tokens,
+    }
+    return result, usage
 
 
 def embed_text(text: str) -> list[float]:
