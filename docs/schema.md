@@ -86,7 +86,7 @@
 | content | jsonb | nullable |
 | embedding | vector(1536) | |
 
-**Reasoning:** One row per prerequisite topic. `topic_name` has a UNIQUE constraint — the same topic cannot have duplicate rows, enabling LLM output to be stored once per topic and shared across all articles that reference it. `content` is nullable — it is populated on first user click (on-demand), not at ingest. At ingest, only `topic_name` and `embedding` are written. `content` stores the full LLM response as `{"definition": "...", "why_it_matters": "...", "example": "...", "deep_dive": "..."}` — `jsonb` is used over `text` so Postgres validates JSON on insert and pgadmin renders it readably. `updated_at` tracks last regeneration for the configurable refresh cycle (default 7 days). `embedding` stores the topic name's vector representation — used at ingest time to find similar existing prerequisites via cosine similarity (threshold: 0.95) before inserting a new row.
+**Reasoning:** One row per prerequisite topic. `topic_name` has a UNIQUE constraint — the same topic cannot have duplicate rows, enabling LLM output to be stored once per topic and shared across all articles that reference it. `content` is nullable — it is populated on first user click (on-demand), not at ingest. At ingest, only `topic_name` and `embedding` are written. `content` stores the full LLM response as `{"definition": "...", "why_it_matters": "...", "example": "...", "deep_dive": "..."}` — `jsonb` is used over `text` so Postgres validates JSON on insert and pgadmin renders it readably. `updated_at` tracks last regeneration for the configurable refresh cycle (default 7 days). `embedding` stores the topic name's vector representation — used at ingest time to find similar existing prerequisites via cosine similarity (threshold: 0.88) before inserting a new row.
 
 ---
 
@@ -109,7 +109,7 @@
 | tag | text | UNIQUE |
 | embedding | vector(1536) | |
 
-**Reasoning:** One row per tag — `tag` column stores a single tag value (e.g., `"kafka"`, `"scaling"`). Storing multiple tags in one column would violate 1NF (values must be atomic). Unique constraint on `tag` enforces at the DB level that the same tag cannot have duplicate rows — normalization before insert handles this in practice, but the constraint is the safety net. `embedding` stores the tag's vector representation — used at ingest time to find similar existing tags via cosine similarity (threshold: 0.95) before inserting a new row.
+**Reasoning:** One row per tag — `tag` column stores a single tag value (e.g., `"kafka"`, `"scaling"`). Storing multiple tags in one column would violate 1NF (values must be atomic). Unique constraint on `tag` enforces at the DB level that the same tag cannot have duplicate rows — normalization before insert handles this in practice, but the constraint is the safety net. `embedding` stores the tag's vector representation — used at ingest time to find similar existing tags via cosine similarity (threshold: 0.88) before inserting a new row.
 
 ---
 

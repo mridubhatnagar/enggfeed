@@ -10,14 +10,18 @@
 - Prerequisites: rectangular, solid background — color TBD. Both tags and prerequisites will be solid with different colors; finalize during frontend development when colors can be compared visually.
 - Button colors: TBD — to be finalized during frontend development when colors can be visually reviewed
 
-## Company Filter
-- Dropdown (v1)
-- Rich styling: company favicon/logo next to each company name, smooth open/close animation, highlighted selected state
+## Company + Topic Filter
+- **Shipped as of v1.1** (superseded the original v1 dropdown plan — see `docs/v1.1_features.md`): a two-row horizontally-scrollable pill strip, not a dropdown.
+  - Company row and Topic row, each independently multi-select
+  - Filters combine as: blogs matching **any selected company AND any selected topic** (Company+Company = OR, Topic+Topic = OR, Company+Topic = AND)
+  - Active pills highlighted in indigo
+  - Selected values are synced to the URL as comma-separated `source`/`tag` query params for shareability
+  - Filter strip is sticky (`position: sticky; top: 60px`) below the navbar, so it stays accessible while scrolling
 
 ## Feed Page Layout
 - Desktop: 3 column card grid throughout — default feed and tag filter use the same grid layout
 - Mobile: single column vertical list
-- Company filter dropdown above the grid
+- Sticky company/topic pill filter strip above the grid (see Company + Topic Filter above)
 - **Future consideration:** grid/list toggle for users — purely a CSS change, low effort when needed
 
 ## Card Layout
@@ -96,9 +100,11 @@
 - **Note:** Find free illustrations for empty state (e.g., unDraw, Storyset)
 
 ## Pagination
-- Pagination over infinite scroll — users come to read and discover, not endlessly scroll
-- Page state reflected in URL (e.g., `/?page=2&tag=databases`) for shareability
-- **Note:** Articles per page to be decided during frontend development — depends on card size and screen size
+- **Shipped as of v1.1** (superseded the original "pagination over infinite scroll" decision — see `docs/v1.1_features.md`): infinite scroll, not pagination buttons.
+  - `IntersectionObserver` watches a sentinel element at the bottom of the feed; fetches the next page and appends when it comes into view
+  - Loading spinner shown while fetching; observer stops once all pages are loaded
+  - Sticky filter strip means users can still adjust filters at any scroll position without losing their place
+- Filter state (not page number) is reflected in the URL (e.g., `/?source=GitHub&tag=databases`) for shareability
 
 ## Ad Slots
 - **Feed page** — full-width ad strip between card rows (after row 1). Visible to all users.

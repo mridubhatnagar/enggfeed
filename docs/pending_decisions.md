@@ -2,9 +2,9 @@
 
 ---
 
-## LLM Model Choice
+## LLM Model Choice — Resolved
 
-**Question:** Claude Sonnet 4.6 or GPT-4.1?
+**Decision: Claude Sonnet 4.6.** Hardcoded throughout (`utils.py` `call_llm`, `prompts/*.py`) and confirmed via `eval/phase1_generate.py` (see `docs/SETUP.md` → "Run evals first"). GPT-4.1 is not used for generation anywhere in the codebase — OpenAI is used only for `text-embedding-3-small` embeddings, a separate concern.
 
 | | Sonnet 4.6 | GPT-4.1 |
 |---|---|---|
@@ -12,31 +12,15 @@
 | Output | $15.00/Mtok | $8.00/Mtok |
 | Cache read | $0.15/Mtok | $0.50/Mtok |
 
-- Cost is negligible at this project's scale either way
-- Sonnet has cheaper cache reads — relevant for ingest where system prompt is reused
-- Sonnet keeps the stack simpler (one vendor, one SDK)
-- **Quality is undecided** — run evals on both before deciding. Key thing to check: structured JSON output reliability for tag and prerequisite extraction, since that feeds directly into the normalization pipeline.
-- Use Anthropic Console and OpenAI Playground with the same prompt on 10-15 real RSS articles, compare outputs side by side.
+(Cost table kept for reference — the original tradeoff reasoning is in git history / `docs/tech_decisions.md`.)
 
 ---
 
-
-
-## Tagging Pipeline
-
-**Question:** Which LLM model for tagging, and what does the prompt look like?
+## Tagging Pipeline — Resolved
 
 - Tags are LLM freeform — normalization via embedding + cosine similarity (threshold: 0.88) at ingest. See `docs/tech_decisions.md` Tags section.
-- Open question: whether to feed existing RSS `<category>` values to LLM as hints — decide after evaluating tagging quality in practice
-- Prompt lives in `prompts/ingest.py`
-
-**TODO — validate before implementing:**
-1. Write tagging prompt in `prompts/ingest.py`
-2. Manually copy content from 10–15 RSS feed entries across different sources
-3. Run in Anthropic Console Evaluation Tool — feed article content as `{{ARTICLE_CONTENT}}` variable, review tag output
-4. Iterate on prompt until satisfied, then lock for v1
-
-Same eval approach applies to `prompts/summary.py` and `prompts/prerequisites.py` before integrating into the project.
+- Prompt is finalized in `prompts/ingest.py` (full text in `docs/prompts.md`), validated via the eval process in `docs/SETUP.md`.
+- The "feed RSS `<category>` values to LLM as hints" idea was not adopted — `INGEST_PROMPT` only takes `title` and `content`, no category hints are passed.
 
 ---
 
