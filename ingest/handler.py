@@ -31,9 +31,11 @@ from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
 from constants import (
+    ANTHROPIC_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
     CONTENT_TIER_PARTIAL_MAX_WORDS,
     EMBEDDING_COST_PER_MILLION_TOKENS,
+    EMBEDDING_MODEL,
     LLM_INPUT_COST_PER_MILLION_TOKENS,
     LLM_OUTPUT_COST_PER_MILLION_TOKENS,
     TAG_SIMILARITY_THRESHOLD,
@@ -51,9 +53,6 @@ from simplify.service import SimplifyService
 from summary.service import SummaryService
 from tags.service import BlogTagService, TagService
 from utils import call_llm
-
-_ANTHROPIC_MODEL = "claude-sonnet-4-6"
-_EMBEDDING_MODEL = "text-embedding-3-small"
 
 logger = logging.getLogger(__name__)
 
@@ -408,7 +407,7 @@ class IngestHandler:
             blog_id=blog_id,
             call_type=call_type.value,
             provider="anthropic",
-            model=_ANTHROPIC_MODEL,
+            model=ANTHROPIC_MODEL,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
@@ -428,7 +427,7 @@ class IngestHandler:
             blog_id=blog_id,
             call_type=call_type.value,
             provider="openai",
-            model=_EMBEDDING_MODEL,
+            model=EMBEDDING_MODEL,
             input_tokens=None,
             output_tokens=None,
             total_tokens=total_tokens,

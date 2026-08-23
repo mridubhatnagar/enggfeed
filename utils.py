@@ -4,6 +4,7 @@ import anthropic
 import openai
 
 from config import settings
+from constants import ANTHROPIC_MODEL
 from exceptions import LLMUnreachableError
 
 
@@ -26,7 +27,7 @@ def call_llm(
     )
     try:
         message = client.messages.create(
-            model="claude-sonnet-4-6",
+            model=ANTHROPIC_MODEL,
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
             system="Return only valid JSON. Do not include any explanation or prose outside the JSON object.",

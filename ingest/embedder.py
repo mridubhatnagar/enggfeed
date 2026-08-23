@@ -8,6 +8,7 @@ topic names.
 import openai
 
 from config import settings
+from constants import EMBEDDING_MODEL
 from exceptions import LLMUnreachableError
 
 
@@ -18,8 +19,6 @@ class Embedder:
         embedder = Embedder()
         vector: list[float] = embedder.embed("some text")
     """
-
-    _MODEL = "text-embedding-3-small"
 
     def __init__(self) -> None:
         self._client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
@@ -36,7 +35,7 @@ class Embedder:
         """
         try:
             response = self._client.embeddings.create(
-                model=self._MODEL,
+                model=EMBEDDING_MODEL,
                 input=text,
             )
             vector = response.data[0].embedding
