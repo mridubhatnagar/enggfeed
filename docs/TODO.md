@@ -94,7 +94,7 @@
 - [x] `GET /auth/me` without JWT cookie — returns 401
 - [x] `POST /auth/logout` — clears JWT cookie
 - [x] User row exists in `user` table
-- [x] Email not in `allowed_users` — rejected with 401
+- [x] ~~Email not in `allowed_users` — rejected with 401~~ — **stale:** the `allowed_users` allowlist was later removed entirely (see `docs/v1.2_features.md` → "Remove allowed_users — Open to Public"). Any Google account can now sign in.
 
 ---
 
@@ -207,9 +207,9 @@
 
 - [x] **HTML shell** — navbar, feed row, blog card grid, modals, pagination, empty state
 - [x] **On page load** — `GET /auth/me`, `GET /api/v1/sources`, `GET /api/v1/blogs`
-- [x] **Company filter dropdown**
+- [x] ~~Company filter dropdown~~ — **superseded:** replaced by the multi-select company/topic pill strip in v1.1 (see `docs/v1.1_features.md`, `docs/ux_decisions.md`)
 - [x] **Blog card** — thumbnail, title, prerequisites chips, tags chips, Summary/Simplify buttons, content tier logic
-- [x] **Pagination**
+- [x] ~~Pagination~~ — **superseded:** replaced by infinite scroll in v1.1
 - [x] **Empty state**
 - [x] **Summary page**
 - [x] **Simplify page**
@@ -221,44 +221,46 @@
 
 ---
 
-## Feedback module
+## Feedback module — ✓ Done
+
+All items below are shipped and verified in code (`feedback/` module fully implemented; see `docs/v1.2_features.md` for the full design record).
 
 ### Database
 
-- [ ] **New Alembic migration** — add `feedback` table with `(user_id, blog_id, type)` unique constraint
-- [ ] **Add `RateLimitError`** to `exceptions.py` with 429 HTTP mapping in controller
-- [ ] **Add `FEEDBACK_RATE_LIMIT_PER_MINUTE` and `FEEDBACK_RATE_LIMIT_PER_DAY`** to `constants.py`
+- [x] **New Alembic migration** — add `feedback` table with `(user_id, blog_id, type)` unique constraint
+- [x] **Add `RateLimitError`** to `exceptions.py` with 429 HTTP mapping in controller
+- [x] **Add `FEEDBACK_RATE_LIMIT_PER_MINUTE` and `FEEDBACK_RATE_LIMIT_PER_DAY`** to `constants.py`
 
 ### Backend
 
-- [ ] **`feedback/models.py`** — `Feedback` ORM model
-- [ ] **`feedback/schemas.py`** — `FeedbackType` enum, `FeedbackRequest` schema
-- [ ] **`feedback/dao.py`** — `get_by_user_blog_type`, `create`, `update`
-- [ ] **`feedback/service.py`** — `get_feedback_by_user_blog_type`, `create_feedback`, `update_feedback`
-- [ ] **`feedback/handler.py`** — rate limit checks (per-minute + per-day), content validation, create vs update logic
-- [ ] **`feedback/controller.py`** — `POST /api/v1/feedback`, wire into `app.py`
-- [ ] **`feedback/__init__.py`**
+- [x] **`feedback/models.py`** — `Feedback` ORM model
+- [x] **`feedback/schemas.py`** — `FeedbackType` enum (actually lives in `feedback/enums.py`), `FeedbackRequest` schema
+- [x] **`feedback/dao.py`** — `get_by_user_blog_type`, `create`, `update`
+- [x] **`feedback/service.py`** — `get_feedback_by_user_blog_type`, `create_feedback`, `update_feedback`, `create_or_update`
+- [x] **`feedback/handler.py`** — rate limit checks (per-minute + per-day), content validation, create-or-update logic
+- [x] **`feedback/controller.py`** — `POST /api/v1/feedback`, wired into `app.py`
+- [x] **`feedback/__init__.py`**
 
 ### Frontend
 
-- [ ] **Feed card** — "⚑ Report incorrect tags, prerequisites" button opens feedback modal (signed-in only)
-- [ ] **Feedback modal (card)** — two fields: Suggested Tags, Suggested Prerequisites. On submit, send up to two requests (one per non-empty field). Show char count. Rate limit error handling.
-- [ ] **Summary view** — "⚑ Report incorrect summary" link above bottom buttons
-- [ ] **Simplify view** — "⚑ Report incorrect simplification" link above bottom buttons
-- [ ] **Feedback modal (detail)** — one field: describe what's wrong. Show char count. Rate limit error handling.
+- [x] **Feed card** — "⚑ Report incorrect tags, prerequisites" button opens feedback modal (signed-in only)
+- [x] **Feedback modal (card)** — two fields: Suggested Tags, Suggested Prerequisites. On submit, send up to two requests (one per non-empty field). Show char count. Rate limit error handling.
+- [x] **Summary view** — "⚑ Report incorrect summary" link above bottom buttons
+- [x] **Simplify view** — "⚑ Report incorrect simplification" link above bottom buttons
+- [x] **Feedback modal (detail)** — one field: describe what's wrong. Show char count. Rate limit error handling.
 
 ### ✅ Checkpoint — Feedback module
 
-- [ ] `POST /api/v1/feedback` as signed-in — returns 200, row inserted in DB
-- [ ] Submit again for same `(user_id, blog_id, type)` — row updated, not duplicated
-- [ ] Empty field on card submit — no request sent for that type
-- [ ] Content < 10 chars — returns 422
-- [ ] Content > 500 chars — returns 422
-- [ ] Submit 2nd time within 1 minute — returns 429
-- [ ] Submit 6th time in a day — returns 429
-- [ ] As guest — returns 401
-- [ ] Report button visible on card for signed-in users, hidden for guests
-- [ ] Report link visible on summary and simplify pages
+- [x] `POST /api/v1/feedback` as signed-in — returns 200, row inserted in DB
+- [x] Submit again for same `(user_id, blog_id, type)` — row updated, not duplicated
+- [x] Empty field on card submit — no request sent for that type
+- [x] Content < 10 chars — returns 422
+- [x] Content > 500 chars — returns 422
+- [x] Submit 2nd time within 1 minute — returns 429
+- [x] Submit 6th time in a day — returns 429
+- [x] As guest — returns 401
+- [x] Report button visible on card for signed-in users, hidden for guests
+- [x] Report link visible on summary and simplify pages
 
 ---
 

@@ -22,6 +22,7 @@ Error handling:
 
 import logging
 import re
+from decimal import Decimal
 
 import requests
 import sentry_sdk
@@ -30,12 +31,19 @@ from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
 from constants import (
+    ANTHROPIC_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
     CONTENT_TIER_PARTIAL_MAX_WORDS,
+    EMBEDDING_COST_PER_MILLION_TOKENS,
+    EMBEDDING_MODEL,
+    LLM_INPUT_COST_PER_MILLION_TOKENS,
+    LLM_OUTPUT_COST_PER_MILLION_TOKENS,
     TAG_SIMILARITY_THRESHOLD,
 )
 from exceptions import LLMUnreachableError, RSSFeedError
 from ingest.embedder import Embedder
+from ingest.models import LLMUsageCallType
+from ingest.service import LLMUsageService
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.ingest import INGEST_PROMPT
 from prompts.simplify import SIMPLIFY_PROMPT
@@ -70,6 +78,7 @@ class IngestHandler:
         simplify_service: SimplifyService,
         rss_client: RSSClient,
         embedder: Embedder,
+        llm_usage_service: LLMUsageService,
     ) -> None:
         self.blog_source_service = blog_source_service
         self.blog_service = blog_service
@@ -81,6 +90,7 @@ class IngestHandler:
         self.simplify_service = simplify_service
         self.rss_client = rss_client
         self.embedder = embedder
+        self.llm_usage_service = llm_usage_service
 
     def trigger_job(self) -> None:
         """Run the daily ingest job across all RSS sources.
@@ -201,7 +211,7 @@ class IngestHandler:
 
         prompt = INGEST_PROMPT.format(title=title, content=content)
         try:
-            llm_result = call_llm(prompt)
+            llm_result, usage = call_llm(prompt, return_usage=True)
         except LLMUnreachableError as exc:
             sentry_sdk.capture_exception(exc)
             logger.error(
@@ -210,6 +220,9 @@ class IngestHandler:
                 exc,
             )
             return
+        self._record_chat_usage(
+            blog_id, LLMUsageCallType.TAG_PREREQUISITE_EXTRACTION, usage
+        )
 
         tags: list[str] = llm_result.get("tags", [])
         prerequisites: list[str] = llm_result.get("prerequisites", [])
@@ -263,19 +276,21 @@ class IngestHandler:
     def _process_summary(self, blog_id: str, title: str, content: str) -> None:
         """Generate and persist the summary for one article at ingest time."""
         prompt = SUMMARY_PROMPT.format(title=title, content=content)
-        llm_result = call_llm(prompt)
+        llm_result, usage = call_llm(prompt, return_usage=True)
         summary_content = {
             "short_summary": llm_result.get("short_summary", ""),
             "key_points": llm_result.get("key_points", []),
         }
         self.summary_service.create_summary(blog_id, summary_content)
+        self._record_chat_usage(blog_id, LLMUsageCallType.SUMMARY, usage)
 
     def _process_simplify(self, blog_id: str, title: str, content: str) -> None:
         """Generate and persist the ELI5 simplify for one article at ingest time."""
         prompt = SIMPLIFY_PROMPT.format(title=title, content=content)
-        llm_result = call_llm(prompt)
+        llm_result, usage = call_llm(prompt, return_usage=True)
         simplify_content = llm_result.get("simplify", "")
         self.simplify_service.create_simplify(blog_id, simplify_content)
+        self._record_chat_usage(blog_id, LLMUsageCallType.SIMPLIFY, usage)
 
     def _fetch_thumbnail(self, link: str) -> str | None:
         """Scrape og:image from the article URL. Returns None on any failure."""
@@ -305,7 +320,8 @@ class IngestHandler:
             tag.action, tag.canonical (on merge).
         """
         normalized = self._normalize_name(tag_name)
-        embedding = self.embedder.embed(normalized)
+        embedding, usage = self.embedder.embed(normalized, return_usage=True)
+        self._record_embedding_usage(blog_id, LLMUsageCallType.TAG_EMBEDDING, usage)
         match, score = self.tag_service.find_similar_tag(
             embedding, TAG_SIMILARITY_THRESHOLD
         )
@@ -342,7 +358,10 @@ class IngestHandler:
             prerequisite.canonical (on merge).
         """
         normalized = self._normalize_name(topic_name)
-        embedding = self.embedder.embed(normalized)
+        embedding, usage = self.embedder.embed(normalized, return_usage=True)
+        self._record_embedding_usage(
+            blog_id, LLMUsageCallType.PREREQUISITE_EMBEDDING, usage
+        )
         match, score = self.prerequisite_service.find_similar_prerequisite(
             embedding, TAG_SIMILARITY_THRESHOLD
         )
@@ -373,3 +392,44 @@ class IngestHandler:
             blog_id, prerequisite_id
         )
         linked_prerequisite_ids.add(prerequisite_id)
+
+    def _record_chat_usage(
+        self, blog_id: str, call_type: LLMUsageCallType, usage: dict
+    ) -> None:
+        input_tokens = usage["input_tokens"]
+        output_tokens = usage["output_tokens"]
+        cost = Decimal(input_tokens) / Decimal(1_000_000) * Decimal(
+            str(LLM_INPUT_COST_PER_MILLION_TOKENS)
+        ) + Decimal(output_tokens) / Decimal(1_000_000) * Decimal(
+            str(LLM_OUTPUT_COST_PER_MILLION_TOKENS)
+        )
+        self.llm_usage_service.create_llm_usage(
+            blog_id=blog_id,
+            call_type=call_type.value,
+            provider="bedrock",
+            model=ANTHROPIC_MODEL,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            total_tokens=input_tokens + output_tokens,
+            cost_usd=cost,
+        )
+
+    def _record_embedding_usage(
+        self, blog_id: str, call_type: LLMUsageCallType, usage: dict
+    ) -> None:
+        total_tokens = usage["total_tokens"]
+        cost = (
+            Decimal(total_tokens)
+            / Decimal(1_000_000)
+            * Decimal(str(EMBEDDING_COST_PER_MILLION_TOKENS))
+        )
+        self.llm_usage_service.create_llm_usage(
+            blog_id=blog_id,
+            call_type=call_type.value,
+            provider="openai",
+            model=EMBEDDING_MODEL,
+            input_tokens=None,
+            output_tokens=None,
+            total_tokens=total_tokens,
+            cost_usd=cost,
+        )

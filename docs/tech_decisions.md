@@ -102,7 +102,8 @@ enggsystemfeed/
 - **GitHub Actions cron** — triggers `POST /api/v1/ingest` once per day at 6 AM UTC.
 - Endpoint is protected by `x-ingest-secret` header — validated against `INGEST_SECRET` env var using `secrets.compare_digest`.
 - Endpoint is hidden from Swagger UI (`include_in_schema=False`).
-- No monitoring inside the app — GitHub Actions job fails if endpoint returns non-200, triggering a GitHub email notification.
+- **Asynchronous via FastAPI `BackgroundTasks`** — the endpoint validates the secret, schedules `IngestHandler.trigger_job()` as a background task, and returns immediately (`{"message": "Ingest started"}`). The actual pipeline runs after the response is sent, in the same app process. This was changed from a fully synchronous implementation because the pipeline (RSS fetch + per-article LLM/embedding calls across all sources) routinely exceeded the reverse-proxy timeout, causing GitHub Actions to report `504` failures even when ingest completed successfully server-side.
+- **Tradeoff:** GitHub Actions' pass/fail status now only reflects whether the request was accepted (secret valid, job scheduled) — not whether the ingest pipeline actually succeeded. Background job errors are caught in `_run_ingest_job` and reported to Sentry instead of failing the HTTP response. Sentry, not the Actions run status, is the source of truth for ingest failures.
 
 ## Auth (Google OAuth)
 - Full server-side OAuth flow — no token exposure to client
@@ -112,7 +113,7 @@ enggsystemfeed/
 - JWT payload: `user_id` only — minimal, no sensitive data exposed
 - JWT expiry: 2 hours — no silent refresh, user is forced to log in again on expiry
 - Name and avatar fetched from DB using `user_id` when needed
-- Email stored in DB only — for future allowlist-based access control
+- Email stored in DB — no access-control use today. There is no allowlist gate: any Google account that completes OAuth is signed in (the `allowed_users` table and its gate were built, then removed — see `docs/v1.2_features.md` → "Remove allowed_users — Open to Public")
 
 ## Caching
 - Redis for caching layer
@@ -275,17 +276,20 @@ Custom exceptions live in `exceptions.py` at project root.
 class DatabaseError(Exception): ...       # DAO layer — wraps SQLAlchemy exceptions
 class UnauthorizedError(Exception): ...   # No valid JWT present
 class AuthError(Exception): ...           # OAuth flow failure (bad state, token exchange error, etc.)
-class NotAllowedError(AuthError): ...     # Authenticated user's email not in allowlist
 class ForbiddenError(Exception): ...      # Content tier check failed
 class NotFoundError(Exception): ...       # Record not found
 class RSSFeedError(Exception): ...        # RSS feed unavailable
 class LLMUnreachableError(Exception): ... # LLM call failed
 class RateLimitError(Exception): ...      # Rate limit exceeded
+class ValidationError(Exception): ...     # Request content fails server-side validation (e.g. feedback length)
+class FeedbackError(Exception): ...       # Feedback submission failed unexpectedly
 ```
+
+**Note:** `NotAllowedError` (email not in allowlist) no longer exists — removed along with the `allowed_users` gate.
 
 **Layer responsibilities:**
 - **DAO** — catches SQLAlchemy exceptions, re-raises as `DatabaseError`
-- **Handler** — raises business logic exceptions (`NotFoundError`, `ForbiddenError`, `AuthError`, `UnauthorizedError`, `RSSFeedError`, `LLMUnreachableError`). Lets `DatabaseError` propagate.
+- **Handler** — raises business logic exceptions (`NotFoundError`, `ForbiddenError`, `AuthError`, `UnauthorizedError`, `RSSFeedError`, `LLMUnreachableError`, `RateLimitError`, `ValidationError`, `FeedbackError`). Lets `DatabaseError` propagate.
 - **Controller** — catches all exceptions, converts to `APIResponse(success=False, data=None, error=ErrorDetail(code=..., message=...))` with appropriate HTTP status code
 
 **HTTP status code mapping:**
