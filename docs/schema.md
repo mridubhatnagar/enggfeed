@@ -139,6 +139,24 @@
 
 ---
 
+### llm_usage
+| Column | Type | Constraint |
+|--------|------|------------|
+| id | uuid (PK) | |
+| blog_id | uuid (FK → blog) | |
+| call_type | text | enum: 'tag_prerequisite_extraction', 'summary', 'simplify', 'tag_embedding', 'prerequisite_embedding' |
+| provider | text | e.g. 'anthropic', 'openai' |
+| model | text | e.g. 'claude-sonnet-4-6', 'text-embedding-3-small' |
+| input_tokens | integer | nullable — embeddings have no separate input/output split |
+| output_tokens | integer | nullable |
+| total_tokens | integer | |
+| cost_usd | numeric(12,8) | |
+| created_at | timestamp | |
+
+**Reasoning:** One row per billable LLM/embedding call made during ingest — `call_type` distinguishes the 5 call sites in `ingest/handler.py` (the combined tag+prerequisite extraction call, summary generation, simplify generation, and one embedding call per tag/prerequisite normalized). Per-call rows (not per-run aggregates) preserve breakdown by call type — rollups to per-run or per-day totals are done via query, not baked into the schema. `cost_usd` is computed and stored at write time from a pricing table in `constants.py`, not derived at query time — this keeps historical rows accurate to what was actually paid even if pricing changes later. Only successful calls are logged; a failed `LLMUnreachableError` call has no usage data to record.
+
+---
+
 ## ER Diagram
 
 ```mermaid
@@ -223,6 +241,19 @@ erDiagram
         created_at timestamp
     }
 
+    llm_usage {
+        id uuid PK
+        blog_id uuid FK
+        call_type text
+        provider text
+        model text
+        input_tokens int
+        output_tokens int
+        total_tokens int
+        cost_usd numeric
+        created_at timestamp
+    }
+
     blog_source ||--o{ blog : "has"
     blog ||--o| summary : "has"
     blog ||--o| simplify : "has"
@@ -232,6 +263,7 @@ erDiagram
     tag ||--o{ blog_tag : "has"
     blog ||--o{ feedback : "has"
     user ||--o{ feedback : "has"
+    blog ||--o{ llm_usage : "has"
 ```
 
 ---
@@ -251,3 +283,4 @@ erDiagram
 | tag → blog_tag | One-to-many |
 | blog → feedback | One-to-many |
 | user → feedback | One-to-many |
+| blog → llm_usage | One-to-many |

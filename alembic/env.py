@@ -16,7 +16,7 @@ from config import settings as app_config  # noqa: E402
 # Import all models so Base.metadata is fully populated for future autogenerate migrations.
 # Wrapped in try/except — models files do not exist yet when the initial migration is created.
 try:
-    import blog.models, tags.models, prerequisites.models, summary.models, simplify.models, feedback.models  # noqa: F401, E402
+    import blog.models, tags.models, prerequisites.models, summary.models, simplify.models, feedback.models, ingest.models  # noqa: F401, E402
 except ImportError:
     pass
 

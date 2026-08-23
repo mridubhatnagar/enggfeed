@@ -7,8 +7,10 @@ from blog.dao import BlogDAO, BlogSourceDAO
 from blog.service import BlogService, BlogSourceService
 from config import settings
 from database import SessionLocal
+from ingest.dao import LLMUsageDAO
 from ingest.embedder import Embedder
 from ingest.handler import IngestHandler
+from ingest.service import LLMUsageService
 from prerequisites.dao import BlogPrerequisiteDAO, PrerequisiteDAO
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from rss_client import RSSClient
@@ -50,6 +52,7 @@ def trigger_ingest(x_ingest_secret: str = Header(default="")):
             simplify_service=SimplifyService(SimplifyDAO(db)),
             rss_client=RSSClient(),
             embedder=Embedder(),
+            llm_usage_service=LLMUsageService(LLMUsageDAO(db)),
         )
         handler.trigger_job()
     finally:
