@@ -24,16 +24,25 @@ class Embedder:
     def __init__(self) -> None:
         self._client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
 
-    def embed(self, text: str) -> list[float]:
+    def embed(
+        self, text: str, return_usage: bool = False
+    ) -> list[float] | tuple[list[float], dict]:
         """Embed a single text string and return a list[float] of length 1536.
 
         Raises LLMUnreachableError on any API failure.
+
+        If return_usage is True, returns (vector, usage) where usage is
+        {"total_tokens": int}.
         """
         try:
             response = self._client.embeddings.create(
                 model=self._MODEL,
                 input=text,
             )
-            return response.data[0].embedding
+            vector = response.data[0].embedding
         except Exception as exc:
             raise LLMUnreachableError(f"Failed to embed text: {exc}") from exc
+
+        if not return_usage:
+            return vector
+        return vector, {"total_tokens": response.usage.total_tokens}

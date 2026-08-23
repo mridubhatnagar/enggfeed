@@ -13,6 +13,7 @@
 | PrerequisiteDAO, PrerequisiteService | prerequisites/ | dao.py, service.py |
 | BlogPrerequisiteDAO, BlogPrerequisiteService | prerequisites/ | dao.py, service.py |
 | FeedbackDAO, FeedbackService | feedback/ | dao.py, service.py |
+| LLMUsageDAO, LLMUsageService | ingest/ | dao.py, service.py |
 
 ---
 
@@ -263,6 +264,21 @@ class FeedbackDAO(IFeedbackDAO):
 
 ---
 
+### LLMUsage
+
+```python
+class ILLMUsageDAO(ABC):
+    @abstractmethod
+    def create(self, blog_id: uuid.UUID, call_type: str, provider: str, model: str, input_tokens: int | None, output_tokens: int | None, total_tokens: int, cost_usd: Decimal): ...
+
+
+class LLMUsageDAO(ILLMUsageDAO):
+    def __init__(self, db: Session): ...
+    def create(self, blog_id: uuid.UUID, call_type: str, provider: str, model: str, input_tokens: int | None, output_tokens: int | None, total_tokens: int, cost_usd: Decimal): ...
+```
+
+---
+
 ## Service Classes
 
 ---
@@ -367,6 +383,16 @@ class PrerequisiteService:
 class FeedbackService:
     def __init__(self, dao: IFeedbackDAO): ...
     def create_feedback(self, blog_id: uuid.UUID, type: str, content: str, name: str | None, email: str | None): ...
+```
+
+---
+
+### LLMUsage
+
+```python
+class LLMUsageService:
+    def __init__(self, dao: ILLMUsageDAO): ...
+    def create_llm_usage(self, blog_id: uuid.UUID, call_type: str, provider: str, model: str, input_tokens: int | None, output_tokens: int | None, total_tokens: int, cost_usd: Decimal): ...
 ```
 
 ---

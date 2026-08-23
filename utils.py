@@ -7,12 +7,17 @@ from config import settings
 from exceptions import LLMUnreachableError
 
 
-def call_llm(prompt: str, timeout: int | None = None) -> dict:
+def call_llm(
+    prompt: str, timeout: int | None = None, return_usage: bool = False
+) -> dict | tuple[dict, dict]:
     """Call the LLM and return the parsed JSON response as a dict.
 
     Strips markdown code fences (```json / ```) before parsing.
     Raises LLMUnreachableError on failure, timeout, or invalid JSON.
     Default timeout from config.
+
+    If return_usage is True, returns (result, usage) where usage is
+    {"input_tokens": int, "output_tokens": int}.
     """
     effective_timeout = timeout if timeout is not None else settings.LLM_TIMEOUT_SECONDS
     client = anthropic.Anthropic(
@@ -44,9 +49,18 @@ def call_llm(prompt: str, timeout: int | None = None) -> dict:
         raw = "\n".join(lines).strip()
 
     try:
-        return json.loads(raw)
+        result = json.loads(raw)
     except json.JSONDecodeError as exc:
         raise LLMUnreachableError(f"LLM returned invalid JSON: {exc}") from exc
+
+    if not return_usage:
+        return result
+
+    usage = {
+        "input_tokens": message.usage.input_tokens,
+        "output_tokens": message.usage.output_tokens,
+    }
+    return result, usage
 
 
 def embed_text(text: str) -> list[float]:
