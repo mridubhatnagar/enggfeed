@@ -31,12 +31,12 @@ from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
 from constants import (
-    ANTHROPIC_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
     CONTENT_TIER_PARTIAL_MAX_WORDS,
     EMBEDDING_COST_PER_MILLION_TOKENS,
     EMBEDDING_MODEL,
     LLM_INPUT_COST_PER_MILLION_TOKENS,
+    LLM_MODEL,
     LLM_OUTPUT_COST_PER_MILLION_TOKENS,
     TAG_SIMILARITY_THRESHOLD,
 )
@@ -407,7 +407,7 @@ class IngestHandler:
             blog_id=blog_id,
             call_type=call_type.value,
             provider="bedrock",
-            model=ANTHROPIC_MODEL,
+            model=LLM_MODEL,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
