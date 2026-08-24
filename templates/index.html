@@ -311,8 +311,13 @@
           <div class="spinner"></div>
         </div>
 
+        <!-- Error / not-yet-available state -->
+        <div class="prereq-error" x-show="!prereqLoading && prereqError" x-cloak>
+          <p>This topic isn't ready yet — check back after the next update.</p>
+        </div>
+
         <!-- Content (Primer by default; Deep dive revealed on Read more) -->
-        <template x-if="!prereqLoading && prereqDetail">
+        <template x-if="!prereqLoading && !prereqError && prereqDetail">
           <div>
             <!-- Definition (only if non-empty) -->
             <template x-if="prereqDetail?.primer?.definition">

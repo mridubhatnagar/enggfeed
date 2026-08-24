@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from database import get_db
-from exceptions import DatabaseError, LLMUnreachableError, NotFoundError
+from exceptions import DatabaseError, NotFoundError
 from prerequisites.dao import PrerequisiteDAO
 from prerequisites.handler import PrerequisiteHandler
 from prerequisites.service import PrerequisiteService
@@ -31,12 +31,6 @@ def get_prerequisite(
             success=False,
             data=None,
             error=ErrorDetail(code=404, message=str(exc)),
-        )
-    except LLMUnreachableError as exc:
-        return APIResponse(
-            success=False,
-            data=None,
-            error=ErrorDetail(code=502, message=str(exc)),
         )
     except DatabaseError as exc:
         return APIResponse(

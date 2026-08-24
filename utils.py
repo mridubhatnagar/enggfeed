@@ -1,25 +1,17 @@
 import json
 
-import boto3
-import botocore.exceptions
+import anthropic
 import openai
-from botocore.config import Config as BotoConfig
 
 from config import settings
-from constants import LLM_MODEL
+from constants import ANTHROPIC_MODEL
 from exceptions import LLMUnreachableError
 
 
 def call_llm(
     prompt: str, timeout: int | None = None, return_usage: bool = False
 ) -> dict | tuple[dict, dict]:
-    """Call the LLM via AWS Bedrock's Converse API and return the parsed JSON
-    response as a dict.
-
-    Using the Converse API (rather than a provider-specific SDK) keeps this
-    provider-agnostic — switching models, including back to Anthropic once
-    Bedrock access is granted, is just a change to LLM_MODEL in constants.py,
-    not a rewrite of this function.
+    """Call the LLM and return the parsed JSON response as a dict.
 
     Strips markdown code fences (```json / ```) before parsing.
     Raises LLMUnreachableError on failure, timeout, or invalid JSON.
@@ -29,28 +21,23 @@ def call_llm(
     {"input_tokens": int, "output_tokens": int}.
     """
     effective_timeout = timeout if timeout is not None else settings.LLM_TIMEOUT_SECONDS
-    client = boto3.client(
-        "bedrock-runtime",
-        region_name=settings.AWS_REGION,
-        config=BotoConfig(
-            read_timeout=effective_timeout, connect_timeout=effective_timeout
-        ),
+    client = anthropic.Anthropic(
+        api_key=settings.ANTHROPIC_API_KEY,
+        timeout=effective_timeout,
     )
     try:
-        response = client.converse(
-            modelId=LLM_MODEL,
-            messages=[{"role": "user", "content": [{"text": prompt}]}],
-            system=[
-                {
-                    "text": "Return only valid JSON. Do not include any explanation or prose outside the JSON object."
-                }
-            ],
-            inferenceConfig={"maxTokens": 2048},
+        message = client.messages.create(
+            model=ANTHROPIC_MODEL,
+            max_tokens=2048,
+            messages=[{"role": "user", "content": prompt}],
+            system="Return only valid JSON. Do not include any explanation or prose outside the JSON object.",
         )
-    except (botocore.exceptions.ClientError, botocore.exceptions.BotoCoreError) as exc:
+    except anthropic.APITimeoutError as exc:
+        raise LLMUnreachableError("LLM request timed out") from exc
+    except anthropic.APIError as exc:
         raise LLMUnreachableError(f"LLM API error: {exc}") from exc
 
-    raw = response["output"]["message"]["content"][0]["text"].strip()
+    raw = message.content[0].text.strip()
 
     # Strip markdown code fences if present
     if raw.startswith("```"):
@@ -71,8 +58,8 @@ def call_llm(
         return result
 
     usage = {
-        "input_tokens": response["usage"]["inputTokens"],
-        "output_tokens": response["usage"]["outputTokens"],
+        "input_tokens": message.usage.input_tokens,
+        "output_tokens": message.usage.output_tokens,
     }
     return result, usage
 

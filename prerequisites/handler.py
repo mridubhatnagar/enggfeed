@@ -1,8 +1,6 @@
 from exceptions import NotFoundError
 from prerequisites.schemas import Primer, PrerequisiteDetail
 from prerequisites.service import PrerequisiteService
-from prompts.prerequisites import PREREQUISITES_PROMPT
-from utils import call_llm
 
 
 class PrerequisiteHandler:
@@ -11,21 +9,8 @@ class PrerequisiteHandler:
 
     def get_prerequisite(self, topic_name: str) -> PrerequisiteDetail:
         prereq = self.prerequisite_service.get_prerequisite_by_topic_name(topic_name)
-        if prereq is None:
+        if prereq is None or prereq.content is None:
             raise NotFoundError(f"Prerequisite not found: {topic_name}")
-
-        if prereq.content is None:
-            prompt = PREREQUISITES_PROMPT.format(topic_name=topic_name)
-            llm_result = call_llm(prompt)
-            new_content = {
-                "definition": llm_result.get("definition", ""),
-                "why_it_matters": llm_result.get("why_it_matters", ""),
-                "example": llm_result.get("example", ""),
-                "deep_dive": llm_result.get("deep_dive", ""),
-            }
-            prereq = self.prerequisite_service.update_prerequisite(
-                topic_name, new_content
-            )
 
         content = prereq.content
         primer = Primer(
