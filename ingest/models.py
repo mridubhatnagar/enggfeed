@@ -14,6 +14,7 @@ class LLMUsageCallType(str, enum.Enum):
     SIMPLIFY = "simplify"
     TAG_EMBEDDING = "tag_embedding"
     PREREQUISITE_EMBEDDING = "prerequisite_embedding"
+    PREREQUISITE_CONTENT = "prerequisite_content"
 
 
 class LLMUsage(Base):

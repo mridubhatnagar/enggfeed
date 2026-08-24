@@ -46,6 +46,7 @@ from ingest.models import LLMUsageCallType
 from ingest.service import LLMUsageService
 from prerequisites.service import BlogPrerequisiteService, PrerequisiteService
 from prompts.ingest import INGEST_PROMPT
+from prompts.prerequisites import PREREQUISITES_PROMPT
 from prompts.simplify import SIMPLIFY_PROMPT
 from prompts.summary import SUMMARY_PROMPT
 from rss_client import RSSClient
@@ -352,6 +353,10 @@ class IngestHandler:
     ) -> None:
         """Normalize, embed, find-or-create prerequisite, link to blog.
 
+        A newly-created prerequisite has its explanation content generated
+        immediately — prerequisites are pre-generated at ingest time like
+        summary/simplify, never generated on demand.
+
         Wraps the normalisation decision in an OTel span with attributes:
             prerequisite.candidate, prerequisite.normalized,
             prerequisite.similarity_score, prerequisite.action,
@@ -365,6 +370,7 @@ class IngestHandler:
         match, score = self.prerequisite_service.find_similar_prerequisite(
             embedding, TAG_SIMILARITY_THRESHOLD
         )
+        is_new = match is None
 
         with tracer.start_as_current_span("prerequisite.normalize") as span:
             span.set_attribute("prerequisite.candidate", topic_name)
@@ -383,6 +389,9 @@ class IngestHandler:
                 )
                 prerequisite_id = new_prereq.id
 
+        if is_new:
+            self._generate_prerequisite_content(blog_id, normalized)
+
         if prerequisite_id in linked_prerequisite_ids:
             logger.debug(
                 "Prerequisite '%s' already linked to blog, skipping", normalized
@@ -392,6 +401,20 @@ class IngestHandler:
             blog_id, prerequisite_id
         )
         linked_prerequisite_ids.add(prerequisite_id)
+
+    def _generate_prerequisite_content(self, blog_id: str, topic_name: str) -> None:
+        """Generate and persist the explanation content for a newly-created
+        prerequisite, at ingest time."""
+        prompt = PREREQUISITES_PROMPT.format(topic_name=topic_name)
+        llm_result, usage = call_llm(prompt, return_usage=True)
+        content = {
+            "definition": llm_result.get("definition", ""),
+            "why_it_matters": llm_result.get("why_it_matters", ""),
+            "example": llm_result.get("example", ""),
+            "deep_dive": llm_result.get("deep_dive", ""),
+        }
+        self.prerequisite_service.update_prerequisite(topic_name, content)
+        self._record_chat_usage(blog_id, LLMUsageCallType.PREREQUISITE_CONTENT, usage)
 
     def _record_chat_usage(
         self, blog_id: str, call_type: LLMUsageCallType, usage: dict
