@@ -9,10 +9,10 @@ FEEDBACK_RATE_LIMIT_PER_MINUTE = 2
 FEEDBACK_RATE_LIMIT_PER_DAY = 5
 FEEDBACK_MIN_LENGTH = 10
 FEEDBACK_MAX_LENGTH = 500
-ANTHROPIC_MODEL = (
-    "global.anthropic.claude-sonnet-4-6"  # Bedrock global inference profile ID
+LLM_MODEL = (
+    "global.openai.gpt-5.6-terra"  # Bedrock global cross-region inference profile ID
 )
 EMBEDDING_MODEL = "text-embedding-3-small"
-LLM_INPUT_COST_PER_MILLION_TOKENS = 3.00  # claude-sonnet-4-6
-LLM_OUTPUT_COST_PER_MILLION_TOKENS = 15.00  # claude-sonnet-4-6
+LLM_INPUT_COST_PER_MILLION_TOKENS = 2.00  # gpt-5.6-terra, global CRIS rate
+LLM_OUTPUT_COST_PER_MILLION_TOKENS = 12.00  # gpt-5.6-terra, global CRIS rate
 EMBEDDING_COST_PER_MILLION_TOKENS = 0.02  # text-embedding-3-small
