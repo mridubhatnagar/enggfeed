@@ -8,6 +8,8 @@ Run:
     docker exec -it app_enggsystemfeed python backfill_prerequisites.py
 """
 
+from sqlalchemy import Text, cast, or_
+
 from database import SessionLocal
 from exceptions import LLMUnreachableError
 from prerequisites.dao import PrerequisiteDAO
@@ -21,7 +23,19 @@ def main() -> None:
     db = SessionLocal()
     service = PrerequisiteService(PrerequisiteDAO(db))
     try:
-        missing = db.query(Prerequisite).filter(Prerequisite.content.is_(None)).all()
+        # Catches both true SQL NULL and the JSON `null` scalar that older
+        # code (pre none_as_null=True) could write for an explicit
+        # content=None assignment — both mean "no content yet".
+        missing = (
+            db.query(Prerequisite)
+            .filter(
+                or_(
+                    Prerequisite.content.is_(None),
+                    cast(Prerequisite.content, Text) == "null",
+                )
+            )
+            .all()
+        )
         print(f"Found {len(missing)} prerequisite(s) with no content.", flush=True)
 
         created = failed = 0
