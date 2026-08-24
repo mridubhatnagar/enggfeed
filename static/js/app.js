@@ -18,6 +18,7 @@
 
         showPrereqModal: false,
         prereqLoading: false,
+        prereqError: false,
         prereqTopic: '',
         prereqDetail: null,        // PrerequisiteDetail from /api/v1/prerequisites/{topic}
         prereqShowDeepDive: false,
@@ -188,6 +189,7 @@
         async openPrereqModal(topicName) {
           this.prereqTopic        = topicName;
           this.prereqDetail       = null;
+          this.prereqError        = false;
           this.prereqShowDeepDive = false;
           this.prereqLoading      = true;
           this.showPrereqModal    = true;
@@ -196,9 +198,12 @@
             const json = await res.json();
             if (json.success && json.data) {
               this.prereqDetail = json.data;
+            } else {
+              this.prereqError = true;
             }
-          } catch (_) {}
-          finally {
+          } catch (_) {
+            this.prereqError = true;
+          } finally {
             this.prereqLoading = false;
           }
         },

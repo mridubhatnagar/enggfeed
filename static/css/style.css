@@ -389,6 +389,7 @@
       letter-spacing: 0.06em; color: var(--accent); margin-bottom: 4px;
     }
     .prereq-block-text { font-size: 0.875rem; color: var(--text-primary); line-height: 1.6; }
+    .prereq-error { padding: 24px 0; text-align: center; color: var(--text-muted); font-size: 0.875rem; }
     .btn-read-more {
       background: none; border: 1px solid var(--accent); color: var(--accent);
       border-radius: var(--radius-sm); padding: 7px 16px;

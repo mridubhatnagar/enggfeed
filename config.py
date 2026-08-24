@@ -13,7 +13,7 @@ class Config:
     LLM_TIMEOUT_SECONDS: int = int(os.environ.get("LLM_TIMEOUT_SECONDS", "30"))
     SWAGGER_USERNAME: str = os.environ.get("SWAGGER_USERNAME", "")
     SWAGGER_PASSWORD: str = os.environ.get("SWAGGER_PASSWORD", "")
-    AWS_REGION: str = os.environ.get("AWS_REGION", "ap-south-1")
+    ANTHROPIC_API_KEY: str = os.environ.get("ANTHROPIC_API_KEY", "")
     OPENAI_API_KEY: str = os.environ.get("OPENAI_API_KEY", "")
     PHOENIX_ENDPOINT: str = os.environ.get(
         "PHOENIX_ENDPOINT", "http://phoenix:6006/v1/traces"
