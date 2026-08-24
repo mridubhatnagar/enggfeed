@@ -65,7 +65,6 @@ def seed_prerequisites(db, embedder: Embedder) -> None:
             created_at=datetime.now(),
             updated_at=datetime.now(),
             topic_name=topic_name,
-            content=None,
             embedding=embedding,
         )
         db.add(row)
