@@ -27,6 +27,17 @@ class Config:
     LLM_MONTHLY_COST_ALERT_USD: float = float(
         os.environ.get("LLM_MONTHLY_COST_ALERT_USD", "10.00")
     )
+    LLM_DAILY_COST_ALERT_USD: float = float(
+        os.environ.get("LLM_DAILY_COST_ALERT_USD", "3.00")
+    )
+    SMTP_HOST: str = os.environ.get("SMTP_HOST", "")
+    SMTP_PORT: int = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USERNAME: str = os.environ.get("SMTP_USERNAME", "")
+    SMTP_PASSWORD: str = os.environ.get("SMTP_PASSWORD", "")
+    SMTP_FROM_EMAIL: str = os.environ.get("SMTP_FROM_EMAIL", "") or os.environ.get(
+        "SMTP_USERNAME", ""
+    )
+    ALERT_EMAIL_TO: str = os.environ.get("ALERT_EMAIL_TO", "")
 
 
 settings = Config()

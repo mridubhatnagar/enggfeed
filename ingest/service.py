@@ -36,3 +36,6 @@ class LLMUsageService:
 
     def get_monthly_costs(self, since: datetime):
         return self.dao.list_monthly_costs(since)
+
+    def get_total_costs(self):
+        return self.dao.get_total_costs()

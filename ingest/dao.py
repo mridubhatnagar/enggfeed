@@ -30,6 +30,9 @@ class ILLMUsageDAO(ABC):
     @abstractmethod
     def list_monthly_costs(self, since: datetime): ...
 
+    @abstractmethod
+    def get_total_costs(self): ...
+
 
 class LLMUsageDAO(ILLMUsageDAO):
     def __init__(self, db: Session) -> None:
@@ -97,3 +100,12 @@ class LLMUsageDAO(ILLMUsageDAO):
             )
         except Exception as exc:
             raise DatabaseError(f"Failed to list monthly LLM costs: {exc}") from exc
+
+    def get_total_costs(self):
+        try:
+            return self.db.query(
+                func.count(LLMUsage.id).label("calls"),
+                func.sum(LLMUsage.cost_usd).label("cost_usd"),
+            ).one()
+        except Exception as exc:
+            raise DatabaseError(f"Failed to get total LLM costs: {exc}") from exc

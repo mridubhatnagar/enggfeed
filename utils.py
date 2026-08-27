@@ -1,7 +1,9 @@
 import json
 import logging
+import smtplib
 import threading
 from datetime import datetime, timezone
+from email.mime.text import MIMEText
 
 import anthropic
 import openai
@@ -165,3 +167,34 @@ def embed_text(text: str) -> list[float]:
             exc,
         )
         raise LLMUnreachableError(f"Failed to embed text: {exc}") from exc
+
+
+def send_alert_email(subject: str, body: str) -> None:
+    """Send a plain-text alert email via SMTP.
+
+    No-ops with a warning log if SMTP isn't configured — never raises,
+    since a failed alert-delivery attempt shouldn't ever break the caller.
+    """
+    if not (settings.SMTP_HOST and settings.SMTP_USERNAME and settings.ALERT_EMAIL_TO):
+        logger.warning(
+            "send_alert_email skipped — SMTP not configured (SMTP_HOST/SMTP_USERNAME/ALERT_EMAIL_TO)"
+        )
+        return
+
+    message = MIMEText(body)
+    message["Subject"] = subject
+    message["From"] = settings.SMTP_FROM_EMAIL
+    message["To"] = settings.ALERT_EMAIL_TO
+
+    try:
+        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as server:
+            server.starttls()
+            server.login(settings.SMTP_USERNAME, settings.SMTP_PASSWORD)
+            server.sendmail(
+                settings.SMTP_FROM_EMAIL, [settings.ALERT_EMAIL_TO], message.as_string()
+            )
+        logger.info(
+            "Alert email sent — to=%s subject=%r", settings.ALERT_EMAIL_TO, subject
+        )
+    except Exception as exc:
+        logger.error("Failed to send alert email: %s", exc, exc_info=True)
