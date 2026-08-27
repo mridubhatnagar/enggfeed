@@ -24,6 +24,9 @@ class Config:
     INGEST_SECRET: str = os.environ.get("INGEST_SECRET", "")
     SENTRY_DSN: str = os.environ.get("SENTRY_DSN", "")
     ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "production")
+    LLM_MONTHLY_COST_ALERT_USD: float = float(
+        os.environ.get("LLM_MONTHLY_COST_ALERT_USD", "10.00")
+    )
 
 
 settings = Config()

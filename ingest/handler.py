@@ -22,6 +22,7 @@ Error handling:
 
 import logging
 import re
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import requests
@@ -30,6 +31,7 @@ from bs4 import BeautifulSoup
 from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
+from config import settings
 from constants import (
     ANTHROPIC_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
@@ -115,6 +117,29 @@ class IngestHandler:
                 )
 
         logger.info("Ingest job complete")
+        self._check_monthly_budget()
+
+    def _check_monthly_budget(self) -> None:
+        """Alert (via Sentry) if this calendar month's LLM spend is over
+        the configured budget. Runs once per ingest job (daily cadence) —
+        not a real-time guard, just visibility so a spend spike doesn't
+        go unnoticed until credits run out."""
+        try:
+            now = datetime.now(timezone.utc)
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            rows = self.llm_usage_service.get_monthly_costs(month_start)
+            total_cost = sum((row.cost_usd for row in rows), Decimal("0"))
+            threshold = Decimal(str(settings.LLM_MONTHLY_COST_ALERT_USD))
+            if total_cost > threshold:
+                message = (
+                    f"LLM monthly spend alert: ${total_cost:.2f} spent in "
+                    f"{now.strftime('%B %Y')} — over the ${threshold:.2f} budget"
+                )
+                logger.warning(message)
+                sentry_sdk.capture_message(message, level="warning")
+        except Exception as exc:
+            sentry_sdk.capture_exception(exc)
+            logger.error("Monthly budget check failed: %s", exc, exc_info=True)
 
     def _process_source(self, source) -> None:
         """Fetch feed, find new articles, insert oldest-first."""
