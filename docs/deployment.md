@@ -42,6 +42,14 @@ Create `.env.prod` on the server (never commit this):
 | `OPENAI_API_KEY` | for text-embedding-3-small (embeddings) |
 | `PHOENIX_ENDPOINT` | `http://phoenix:4318/v1/traces` |
 | `INGEST_SECRET` | random secret — must match GitHub Actions secret `INGEST_SECRET` |
+| `SMTP_HOST` | e.g. `smtp.gmail.com` — for direct-email LLM budget alerts (backup to Sentry) |
+| `SMTP_PORT` | e.g. `587` |
+| `SMTP_USERNAME` | SMTP login (e.g. Gmail address) |
+| `SMTP_PASSWORD` | SMTP app password — not your normal account password |
+| `SMTP_FROM_EMAIL` | optional, defaults to `SMTP_USERNAME` |
+| `ALERT_EMAIL_TO` | destination address for budget alert emails |
+| `LLM_DAILY_COST_ALERT_USD` | optional, default `3.00` |
+| `LLM_MONTHLY_COST_ALERT_USD` | optional, default `10.00` |
 
 ---
 
