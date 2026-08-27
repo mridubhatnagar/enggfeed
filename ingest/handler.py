@@ -22,6 +22,7 @@ Error handling:
 
 import logging
 import re
+from datetime import datetime, timezone
 from decimal import Decimal
 
 import requests
@@ -30,6 +31,7 @@ from bs4 import BeautifulSoup
 from opentelemetry import trace
 
 from blog.service import BlogService, BlogSourceService
+from config import settings
 from constants import (
     ANTHROPIC_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
@@ -53,7 +55,7 @@ from rss_client import RSSClient
 from simplify.service import SimplifyService
 from summary.service import SummaryService
 from tags.service import BlogTagService, TagService
-from utils import call_llm
+from utils import call_llm, send_alert_email
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +117,94 @@ class IngestHandler:
                 )
 
         logger.info("Ingest job complete")
+        self._check_daily_budget()
+        self._check_monthly_budget()
+
+    def _budget_snapshot_lines(self, now: datetime) -> list[str]:
+        """Today / this-month / all-time call counts and cost, for the
+        email body of a budget alert."""
+        day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        daily_rows = self.llm_usage_service.get_daily_costs(day_start)
+        daily_calls = sum(row.calls for row in daily_rows)
+        daily_cost = sum((row.cost_usd for row in daily_rows), Decimal("0"))
+
+        monthly_rows = self.llm_usage_service.get_monthly_costs(month_start)
+        monthly_calls = sum(row.calls for row in monthly_rows)
+        monthly_cost = sum((row.cost_usd for row in monthly_rows), Decimal("0"))
+
+        total_row = self.llm_usage_service.get_total_costs()
+        total_calls = total_row.calls or 0
+        total_cost = total_row.cost_usd or Decimal("0")
+
+        return [
+            f"Today ({now.strftime('%Y-%m-%d')}): {daily_calls} call(s), ${daily_cost:.2f}",
+            f"This month ({now.strftime('%B %Y')}): {monthly_calls} call(s), ${monthly_cost:.2f}",
+            f"All-time (till date): {total_calls} call(s), ${total_cost:.2f}",
+        ]
+
+    def _check_daily_budget(self) -> None:
+        """Alert (via Sentry + direct email) if today's LLM spend alone is
+        over the configured daily threshold. Catches a single runaway
+        ingest run (e.g. a new source's full RSS backlog) faster than
+        waiting for the monthly total to cross its own threshold.
+        Alert-only — does not pause or throttle ingest."""
+        try:
+            now = datetime.now(timezone.utc)
+            day_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            rows = self.llm_usage_service.get_daily_costs(day_start)
+            total_cost = sum((row.cost_usd for row in rows), Decimal("0"))
+            threshold = Decimal(str(settings.LLM_DAILY_COST_ALERT_USD))
+            if total_cost > threshold:
+                message = (
+                    f"LLM daily spend alert: ${total_cost:.2f} spent today "
+                    f"({now.strftime('%Y-%m-%d')}) — over the ${threshold:.2f} "
+                    "daily threshold"
+                )
+                logger.warning(message)
+                sentry_sdk.capture_message(message, level="warning")
+                email_body = "\n".join([message, ""] + self._budget_snapshot_lines(now))
+                send_alert_email(
+                    subject=(
+                        f"[enggfeed] Daily LLM spend ${total_cost:.2f} — over "
+                        f"${threshold:.2f} threshold ({now.strftime('%Y-%m-%d')})"
+                    ),
+                    body=email_body,
+                )
+        except Exception as exc:
+            sentry_sdk.capture_exception(exc)
+            logger.error("Daily budget check failed: %s", exc, exc_info=True)
+
+    def _check_monthly_budget(self) -> None:
+        """Alert (via Sentry + direct email) if this calendar month's LLM
+        spend is over the configured budget. Runs once per ingest job
+        (daily cadence) — not a real-time guard, just visibility so a
+        spend spike doesn't go unnoticed until credits run out."""
+        try:
+            now = datetime.now(timezone.utc)
+            month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            rows = self.llm_usage_service.get_monthly_costs(month_start)
+            total_cost = sum((row.cost_usd for row in rows), Decimal("0"))
+            threshold = Decimal(str(settings.LLM_MONTHLY_COST_ALERT_USD))
+            if total_cost > threshold:
+                message = (
+                    f"LLM monthly spend alert: ${total_cost:.2f} spent in "
+                    f"{now.strftime('%B %Y')} — over the ${threshold:.2f} budget"
+                )
+                logger.warning(message)
+                sentry_sdk.capture_message(message, level="warning")
+                email_body = "\n".join([message, ""] + self._budget_snapshot_lines(now))
+                send_alert_email(
+                    subject=(
+                        f"[enggfeed] Monthly LLM spend ${total_cost:.2f} — over "
+                        f"${threshold:.2f} budget ({now.strftime('%B %Y')})"
+                    ),
+                    body=email_body,
+                )
+        except Exception as exc:
+            sentry_sdk.capture_exception(exc)
+            logger.error("Monthly budget check failed: %s", exc, exc_info=True)
 
     def _process_source(self, source) -> None:
         """Fetch feed, find new articles, insert oldest-first."""

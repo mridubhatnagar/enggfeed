@@ -388,6 +388,54 @@ class FeedbackRequest(BaseModel):
 
 ---
 
+### `GET /api/v1/cost`
+- **Role:** Internal/admin — LLM spend visibility (added after an untracked credit-burn incident: two backfill scripts called `call_llm()` without `return_usage=True`, so their cost never landed in `llm_usage`)
+- Not listed in Swagger UI (`include_in_schema=False`)
+- Authenticated via HTTP Basic Auth — same `SWAGGER_USERNAME`/`SWAGGER_PASSWORD` credentials as `/docs`, not a separate secret
+- Query params `days` (default `30`, `1`–`365`) and `months` (default `12`, `1`–`60`) — independent lookback windows for the daily and monthly breakdowns returned in the same response
+- Aggregates the `llm_usage` table, grouped by UTC day (`date_trunc('day', created_at)`) and by UTC calendar month (`date_trunc('month', created_at)`) — the monthly lookback is true calendar-month subtraction, not a 30-day approximation
+- **Caveat:** only reflects calls that went through `LLMUsageService.create_llm_usage` — one-off scripts that call `utils.call_llm()`/`embed_text()` directly without recording usage still won't show up here. The `utils.py` call-site logging (calls_today, cost_usd per call) is the only thing that catches those.
+
+**Headers:**
+| Header | Description |
+|--------|-------------|
+| Authorization | HTTP Basic — `SWAGGER_USERNAME` / `SWAGGER_PASSWORD` |
+
+**Query params:**
+| Param | Description |
+|-------|-------------|
+| days | Lookback window in days for the `daily` breakdown (default 30, max 365) |
+| months | Lookback window in calendar months for the `monthly` breakdown (default 12, max 60) |
+
+**Response (success):** `APIResponse[dict]`
+```json
+{
+  "success": true,
+  "data": {
+    "daily_since": "2026-08-20",
+    "total_calls_daily_window": 92,
+    "total_cost_usd_daily_window": "0.97434300",
+    "daily": [
+      { "day": "2026-08-27", "calls": 92, "cost_usd": "0.97434300" }
+    ],
+    "monthly_since": "2026-02",
+    "total_calls_monthly_window": 1194,
+    "total_cost_usd_monthly_window": "6.42662564",
+    "monthly": [
+      { "month": "2026-08", "calls": 1194, "cost_usd": "6.42662564" }
+    ]
+  },
+  "error": null
+}
+```
+
+**Response (unauthorized):**
+```json
+{ "detail": "Not authenticated" }
+```
+
+---
+
 ### `GET /api/v1/prerequisites/{topic_name}`
 - **Role:** USER
 - Requires JWT cookie
