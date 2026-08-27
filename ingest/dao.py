@@ -1,7 +1,9 @@
 import uuid
 from abc import ABC, abstractmethod
+from datetime import datetime
 from decimal import Decimal
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from exceptions import DatabaseError
@@ -21,6 +23,12 @@ class ILLMUsageDAO(ABC):
         total_tokens: int,
         cost_usd: Decimal,
     ): ...
+
+    @abstractmethod
+    def list_daily_costs(self, since: datetime): ...
+
+    @abstractmethod
+    def list_monthly_costs(self, since: datetime): ...
 
 
 class LLMUsageDAO(ILLMUsageDAO):
@@ -55,3 +63,37 @@ class LLMUsageDAO(ILLMUsageDAO):
             return usage
         except Exception as exc:
             raise DatabaseError(f"Failed to create LLM usage record: {exc}") from exc
+
+    def list_daily_costs(self, since: datetime):
+        try:
+            day = func.date_trunc("day", LLMUsage.created_at).label("day")
+            return (
+                self.db.query(
+                    day,
+                    func.count(LLMUsage.id).label("calls"),
+                    func.sum(LLMUsage.cost_usd).label("cost_usd"),
+                )
+                .filter(LLMUsage.created_at >= since)
+                .group_by(day)
+                .order_by(day)
+                .all()
+            )
+        except Exception as exc:
+            raise DatabaseError(f"Failed to list daily LLM costs: {exc}") from exc
+
+    def list_monthly_costs(self, since: datetime):
+        try:
+            month = func.date_trunc("month", LLMUsage.created_at).label("month")
+            return (
+                self.db.query(
+                    month,
+                    func.count(LLMUsage.id).label("calls"),
+                    func.sum(LLMUsage.cost_usd).label("cost_usd"),
+                )
+                .filter(LLMUsage.created_at >= since)
+                .group_by(month)
+                .order_by(month)
+                .all()
+            )
+        except Exception as exc:
+            raise DatabaseError(f"Failed to list monthly LLM costs: {exc}") from exc

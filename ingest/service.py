@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 from decimal import Decimal
 
 from ingest.dao import ILLMUsageDAO
@@ -29,3 +30,9 @@ class LLMUsageService:
             total_tokens,
             cost_usd,
         )
+
+    def get_daily_costs(self, since: datetime):
+        return self.dao.list_daily_costs(since)
+
+    def get_monthly_costs(self, since: datetime):
+        return self.dao.list_monthly_costs(since)
