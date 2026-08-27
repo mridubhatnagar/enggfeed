@@ -71,6 +71,14 @@
             </template>
           </div>
         </div>
+        <button
+          class="filter-toggle-btn"
+          @click="activeFilterModal = 'company'"
+          type="button"
+        >
+          <span>More</span>
+          <span class="filter-toggle-chevron">&#9662;</span>
+        </button>
       </div>
 
       <!-- Topic row -->
@@ -92,6 +100,14 @@
               </template>
             </div>
           </div>
+          <button
+            class="filter-toggle-btn"
+            @click="activeFilterModal = 'topic'"
+            type="button"
+          >
+            <span>More</span>
+            <span class="filter-toggle-chevron">&#9662;</span>
+          </button>
         </div>
       </template>
 
@@ -358,6 +374,63 @@
       </div>
     </div>
   </div><!-- /prereq modal -->
+
+
+  <div
+    class="modal-backdrop"
+    x-show="activeFilterModal !== null"
+    x-cloak
+    @click.self="activeFilterModal = null"
+    role="dialog"
+    aria-modal="true"
+    aria-label="Filters"
+  >
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2 class="modal-title" x-text="activeFilterModal === 'company' ? 'Company' : 'Topic'"></h2>
+        <button class="modal-close" @click="activeFilterModal = null" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="filter-modal-pills" x-show="activeFilterModal === 'company'">
+          <button
+            class="filter-pill"
+            :class="{ active: activeSources.length === 0 }"
+            @click="activeSources = []; _pushUrl(); _fetchBlogs()"
+            type="button"
+          >All</button>
+          <template x-for="src in sources" :key="src.id">
+            <button
+              class="filter-pill"
+              :class="{ active: activeSources.includes(src.source) }"
+              @click="toggleSource(src.source)"
+              type="button"
+            >
+              <img
+                class="filter-pill-favicon"
+                :src="'https://www.google.com/s2/favicons?domain=' + sourceToFaviconDomain(src.source) + '&sz=32'"
+                :alt="src.source"
+                @error="$event.target.style.display='none'"
+              />
+              <span x-text="src.source"></span>
+            </button>
+          </template>
+        </div>
+        <div class="filter-modal-pills" x-show="activeFilterModal === 'topic'">
+          <template x-for="t in tags" :key="t.tag">
+            <button
+              class="filter-pill"
+              :class="{ active: activeTags.includes(t.tag) }"
+              @click="toggleTag(t.tag)"
+              type="button"
+            >
+              <span x-text="t.tag"></span>
+              <span class="filter-pill-count" x-text="t.count"></span>
+            </button>
+          </template>
+        </div>
+      </div>
+    </div>
+  </div><!-- /filter modal -->
 
 
   <div

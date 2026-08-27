@@ -10,6 +10,7 @@
         tags: [],           // array of { tag, count } from /api/v1/tags
         activeSources: [],  // array of source names
         activeTags: [],     // array of tag names
+        activeFilterModal: null,  // mobile only — 'company' | 'topic' | null, opens the full pill list in a modal
 
         // Infinite scroll
         currentPage: 1,
@@ -88,6 +89,7 @@
             'Spotify':           'spotify.com',
             'Google Developers': 'developers.google.com',
             'Stripe':            'stripe.com',
+            'Google Research':   'research.google',
           };
           return map[sourceName] || (sourceName.toLowerCase().replace(/\s+/g, '') + '.com');
         },
@@ -309,6 +311,7 @@
           if (this.showFeedbackSuccess) { this.showFeedbackSuccess = false; return; }
           if (this.showFeedbackModal)   { this.showFeedbackModal   = false; return; }
           if (this.showPrereqModal)     { this.showPrereqModal     = false; return; }
+          if (this.activeFilterModal)   { this.activeFilterModal   = null;  return; }
         },
 
         copyUrl(url) {

@@ -183,6 +183,20 @@
       font-weight: 700;
       opacity: 0.6;
     }
+    .filter-toggle-btn {
+      display: none;
+      align-items: center;
+      gap: 3px;
+      background: none;
+      border: none;
+      color: var(--accent);
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+      padding: 4px 0 4px 4px;
+    }
+    .filter-toggle-chevron { display: inline-block; transition: transform 0.15s; font-size: 9px; }
+    .filter-toggle-chevron.open { transform: rotate(180deg); }
 
     /* ── Main layout ───────────────────────────────────────────── */
     .main-wrap { max-width: 1200px; margin: 0 auto; padding: 24px 24px 60px; }
@@ -509,7 +523,17 @@
       .navbar-name { display: none; }
       .ad-unit { flex-direction: column; align-items: flex-start; }
       .ad-cta { align-self: flex-end; }
+
+      .filter-row { flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 8px; }
+      .filter-row-label { width: auto; order: 1; }
+      .filter-toggle-btn { display: inline-flex; order: 2; }
+      .filter-scroll-wrap { width: 100%; overflow: hidden; max-height: 34px; order: 3; }
+      .filter-scroll-wrap::after { display: none; }
+      .filter-scroll { flex-wrap: wrap; overflow-x: visible; }
     }
+
+    /* ── Filter modal (mobile "More" — full pill list in a popup) ── */
+    .filter-modal-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 
     /* ── Feedback ──────────────────────────────────────────────── */
     .btn-flag {
