@@ -33,6 +33,9 @@ class ILLMUsageDAO(ABC):
     @abstractmethod
     def get_total_costs(self): ...
 
+    @abstractmethod
+    def list_costs_by_call_type(self, since: datetime): ...
+
 
 class LLMUsageDAO(ILLMUsageDAO):
     def __init__(self, db: Session) -> None:
@@ -109,3 +112,21 @@ class LLMUsageDAO(ILLMUsageDAO):
             ).one()
         except Exception as exc:
             raise DatabaseError(f"Failed to get total LLM costs: {exc}") from exc
+
+    def list_costs_by_call_type(self, since: datetime):
+        try:
+            return (
+                self.db.query(
+                    LLMUsage.call_type,
+                    func.count(LLMUsage.id).label("calls"),
+                    func.sum(LLMUsage.cost_usd).label("cost_usd"),
+                )
+                .filter(LLMUsage.created_at >= since)
+                .group_by(LLMUsage.call_type)
+                .order_by(LLMUsage.call_type)
+                .all()
+            )
+        except Exception as exc:
+            raise DatabaseError(
+                f"Failed to list LLM costs by call type: {exc}"
+            ) from exc
