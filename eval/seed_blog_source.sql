@@ -10,13 +10,16 @@ INSERT INTO blog_source (id, source, rss_feed_link, created_at) VALUES
   (gen_random_uuid(), 'Netflix',             'https://netflixtechblog.medium.com/feed',            now()),
   (gen_random_uuid(), 'Airbnb',              'https://medium.com/feed/airbnb-engineering',         now()),
   (gen_random_uuid(), 'Dropbox',             'https://dropbox.tech/feed',                          now()),
-  (gen_random_uuid(), 'Fly.io',              'https://fly.io/changelog.xml',                       now()),
   (gen_random_uuid(), 'Discord',             'https://discord.com/blog/rss.xml',                   now()),
   (gen_random_uuid(), 'Spotify',             'https://engineering.atspotify.com/feed/',            now()),
-  (gen_random_uuid(), 'Google',              'https://feeds.feedburner.com/GDBcode',               now()),
   (gen_random_uuid(), 'Stripe',              'https://stripe.com/blog/feed.rss',                   now()),
   (gen_random_uuid(), 'Microsoft',           'https://devblogs.microsoft.com/landing/',            now()),
   (gen_random_uuid(), 'Google Research',     'https://research.google/blog/rss/',                  now()),
-  (gen_random_uuid(), 'All Things Distributed', 'https://www.allthingsdistributed.com/atom.xml',   now())
+  (gen_random_uuid(), 'All Things Distributed', 'https://www.allthingsdistributed.com/atom.xml',   now()),
+  (gen_random_uuid(), 'Medium Engineering',   'https://medium.engineering/feed',                    now()),
+  (gen_random_uuid(), 'ByteByteGo',           'https://blog.bytebytego.com/feed',                   now()),
+  (gen_random_uuid(), 'Julia Evans',          'https://jvns.ca/atom.xml',                           now()),
+  (gen_random_uuid(), 'Grab',                 'https://engineering.grab.com/feed.xml',              now()),
+  (gen_random_uuid(), 'Pinterest',            'https://medium.com/feed/pinterest-engineering',      now())
 ON CONFLICT DO NOTHING;
 

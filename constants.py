@@ -10,7 +10,23 @@ FEEDBACK_RATE_LIMIT_PER_DAY = 5
 FEEDBACK_MIN_LENGTH = 10
 FEEDBACK_MAX_LENGTH = 500
 ANTHROPIC_MODEL = "claude-sonnet-4-6"
+ANTHROPIC_SUMMARY_MODEL = "claude-haiku-4-5-20251001"
 EMBEDDING_MODEL = "text-embedding-3-small"
 LLM_INPUT_COST_PER_MILLION_TOKENS = 3.00  # claude-sonnet-4-6
 LLM_OUTPUT_COST_PER_MILLION_TOKENS = 15.00  # claude-sonnet-4-6
+LLM_SUMMARY_INPUT_COST_PER_MILLION_TOKENS = 1.00  # claude-haiku-4-5
+LLM_SUMMARY_OUTPUT_COST_PER_MILLION_TOKENS = 5.00  # claude-haiku-4-5
 EMBEDDING_COST_PER_MILLION_TOKENS = 0.02  # text-embedding-3-small
+
+# call_llm() looks up cost rates by the model actually used for the call —
+# keyed here so a new routed model only needs an entry, not a new call site.
+LLM_MODEL_COST_PER_MILLION_TOKENS = {
+    ANTHROPIC_MODEL: (
+        LLM_INPUT_COST_PER_MILLION_TOKENS,
+        LLM_OUTPUT_COST_PER_MILLION_TOKENS,
+    ),
+    ANTHROPIC_SUMMARY_MODEL: (
+        LLM_SUMMARY_INPUT_COST_PER_MILLION_TOKENS,
+        LLM_SUMMARY_OUTPUT_COST_PER_MILLION_TOKENS,
+    ),
+}

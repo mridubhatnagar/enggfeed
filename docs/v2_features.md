@@ -81,3 +81,50 @@ Agent recursively determines how deeply a prerequisite needs to be understood to
 
 **Why deferred:** Depends on observing real user interaction patterns with prerequisites in v1.
 
+---
+
+## Skip Paywall-Truncated Substack Posts (v3)
+
+Some Substack sources (e.g. Pragmatic Engineer's "The Pulse" roundups) ship RSS items cut off mid-article at the paywall, ending in a trailing `Read more` CTA link back to the post's own URL. Existing word-count-based `ContentTier` gating (`CONTENT_TIER_LIMITED_MAX_WORDS`/`CONTENT_TIER_PARTIAL_MAX_WORDS` in `constants.py`) doesn't reliably catch these — a truncated post can still have enough preview words to score `PARTIAL` or even `FULL`, so it still runs through LLM calls (summary/tags) against incomplete content.
+
+- Detection: Substack-specific paywall-truncation marker (trailing "Read more" link back to the post's own URL) — not a generic cross-platform teaser heuristic.
+- Action on detection: skip ingesting the row entirely (not stored, not shown in the feed) — different from the existing `LIMITED` tier behavior, where thin articles are still inserted and shown but skip LLM calls.
+- Likely touches `rss_client.py` (detection) and `ingest/handler.py::_process_article` (skip-insert).
+
+**Why deferred:** Only currently relevant to Pragmatic Engineer's "Pulse" posts. Related to Agentic Content Fetch above — worth revisiting together.
+
+---
+
+## Independent Publisher/Author Filter Row (v3)
+
+Third filter row, alongside the existing Company and Topic rows, for sources run by an individual rather than a company (e.g. Pragmatic Engineer, All Things Distributed, Engineer's Codex).
+
+- Add `blog_source.source_type` column (`COMPANY` / `INDEPENDENT` enum) — Alembic migration, backfilled for existing rows.
+- `blog/models.py::BlogSource`, `blog/schemas.py::BlogSource` (+ new `SourceType` enum), `blog/dao.py`/`blog/service.py` (`IBlogSourceDAO.list_all`/`list_all_sources` need to expose the field, or a new filtered lookup), `blog/handler.py::get_sources` — expose `source_type` per source.
+- Frontend (`templates/index.html`): third sticky filter pill row + modal, split from the current single Company row.
+- `eval/seed_blog_source.sql`: add `source_type` per row.
+- Docs to update once implemented: `docs/schema.md`, `docs/dao_and_service_class_design.md`, `docs/api_contracts.md` (`GET /api/v1/sources`), `docs/ux_decisions.md`.
+
+**Why deferred:** Only 3 of 19 current sources are independent — user confirmed the schema approach (source_type column) but deferred implementation.
+
+---
+
+## Ops: Purge Fly.io and Google Sources
+
+Both dropped from `eval/seed_blog_source.sql` already. Full purge still pending on actual DB rows (local + production):
+
+- **Fly.io** — `rss_feed_link` (`fly.io/changelog.xml`) 404s, feed is dead. Confirmed **not present** in local `blog_source` (seed insert likely never ran there) — production not yet checked.
+- **Google** (feedburner, `feeds.feedburner.com/GDBcode`) — feed has no date field on any item at all (no `pubDate`/`updated`/`dc:date`), despite `Blog.published_at` being `NOT NULL`; unclear how/whether ingest has been succeeding for this source. Confirmed present in local `blog_source` with **40** already-ingested `Blog` rows — production not yet checked.
+
+**To do when picked back up:**
+1. SSH into production, check `blog_source` for both names (Fly.io may or may not exist there — check independently of local).
+2. Full purge, per row that exists: delete `blog_tag`, `blog_prerequisite`, `llm_usage`, `summary`, `simplify` rows for every `Blog` under that source, then the `Blog` rows themselves, then the `blog_source` row. Do NOT delete shared `tag`/`prerequisite` vocabulary rows — only the blog-level links.
+3. Run on local first, verify, then production.
+
+---
+
+## Candidate Source: Engineer's Codex
+
+`https://read.engineerscodex.com/feed` — evaluated 2026-08-27: full content, no paywall, good quality (see "Skip Paywall-Truncated Substack Posts" above for the Substack-family evaluation notes). Independent publisher, not a company.
+
+**Not seeded** — last post was 2026-05-07 (111 days stale as of this check, by far the most stale of any evaluated source). Revisit if the blog resumes posting.
