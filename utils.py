@@ -13,8 +13,7 @@ from constants import (
     ANTHROPIC_MODEL,
     EMBEDDING_COST_PER_MILLION_TOKENS,
     EMBEDDING_MODEL,
-    LLM_INPUT_COST_PER_MILLION_TOKENS,
-    LLM_OUTPUT_COST_PER_MILLION_TOKENS,
+    LLM_MODEL_COST_PER_MILLION_TOKENS,
 )
 from exceptions import LLMUnreachableError
 
@@ -41,23 +40,28 @@ def _record_daily_call(provider: str) -> int:
 
 
 def call_llm(
-    prompt: str, timeout: int | None = None, return_usage: bool = False
+    prompt: str,
+    timeout: int | None = None,
+    return_usage: bool = False,
+    model: str = ANTHROPIC_MODEL,
 ) -> dict | tuple[dict, dict]:
     """Call the LLM and return the parsed JSON response as a dict.
 
     Strips markdown code fences (```json / ```) before parsing.
     Raises LLMUnreachableError on failure, timeout, or invalid JSON.
-    Default timeout from config.
+    Default timeout from config. Defaults to ANTHROPIC_MODEL — pass model=
+    to route a call to a different model (rates looked up from
+    LLM_MODEL_COST_PER_MILLION_TOKENS).
 
     If return_usage is True, returns (result, usage) where usage is
-    {"input_tokens": int, "output_tokens": int}.
+    {"input_tokens": int, "output_tokens": int, "model": str}.
     """
     effective_timeout = timeout if timeout is not None else settings.LLM_TIMEOUT_SECONDS
     call_number_today = _record_daily_call("anthropic")
     logger.info(
         "LLM call starting — provider=anthropic model=%s prompt_chars=%d timeout=%ds "
         "calls_today=%d",
-        ANTHROPIC_MODEL,
+        model,
         len(prompt),
         effective_timeout,
         call_number_today,
@@ -68,34 +72,33 @@ def call_llm(
     )
     try:
         message = client.messages.create(
-            model=ANTHROPIC_MODEL,
+            model=model,
             max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
             system="Return only valid JSON. Do not include any explanation or prose outside the JSON object.",
         )
     except anthropic.APITimeoutError as exc:
-        logger.error(
-            "LLM call timed out — provider=anthropic model=%s", ANTHROPIC_MODEL
-        )
+        logger.error("LLM call timed out — provider=anthropic model=%s", model)
         raise LLMUnreachableError("LLM request timed out") from exc
     except anthropic.APIError as exc:
         logger.error(
             "LLM call failed — provider=anthropic model=%s error=%s",
-            ANTHROPIC_MODEL,
+            model,
             exc,
         )
         raise LLMUnreachableError(f"LLM API error: {exc}") from exc
 
     input_tokens = message.usage.input_tokens
     output_tokens = message.usage.output_tokens
+    input_cost_rate, output_cost_rate = LLM_MODEL_COST_PER_MILLION_TOKENS[model]
     cost_usd = (
-        input_tokens / 1_000_000 * LLM_INPUT_COST_PER_MILLION_TOKENS
-        + output_tokens / 1_000_000 * LLM_OUTPUT_COST_PER_MILLION_TOKENS
+        input_tokens / 1_000_000 * input_cost_rate
+        + output_tokens / 1_000_000 * output_cost_rate
     )
     logger.info(
         "LLM call succeeded — provider=anthropic model=%s input_tokens=%d "
         "output_tokens=%d cost_usd=%.6f",
-        ANTHROPIC_MODEL,
+        model,
         input_tokens,
         output_tokens,
         cost_usd,
@@ -118,7 +121,7 @@ def call_llm(
     except json.JSONDecodeError as exc:
         logger.error(
             "LLM returned invalid JSON — provider=anthropic model=%s error=%s",
-            ANTHROPIC_MODEL,
+            model,
             exc,
         )
         raise LLMUnreachableError(f"LLM returned invalid JSON: {exc}") from exc
@@ -129,6 +132,7 @@ def call_llm(
     usage = {
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
+        "model": model,
     }
     return result, usage
 

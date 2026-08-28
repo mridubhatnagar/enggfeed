@@ -33,13 +33,12 @@ from opentelemetry import trace
 from blog.service import BlogService, BlogSourceService
 from config import settings
 from constants import (
-    ANTHROPIC_MODEL,
+    ANTHROPIC_SUMMARY_MODEL,
     CONTENT_TIER_LIMITED_MAX_WORDS,
     CONTENT_TIER_PARTIAL_MAX_WORDS,
     EMBEDDING_COST_PER_MILLION_TOKENS,
     EMBEDDING_MODEL,
-    LLM_INPUT_COST_PER_MILLION_TOKENS,
-    LLM_OUTPUT_COST_PER_MILLION_TOKENS,
+    LLM_MODEL_COST_PER_MILLION_TOKENS,
     TAG_SIMILARITY_THRESHOLD,
 )
 from exceptions import LLMUnreachableError, RSSFeedError
@@ -367,7 +366,9 @@ class IngestHandler:
     def _process_summary(self, blog_id: str, title: str, content: str) -> None:
         """Generate and persist the summary for one article at ingest time."""
         prompt = SUMMARY_PROMPT.format(title=title, content=content)
-        llm_result, usage = call_llm(prompt, return_usage=True)
+        llm_result, usage = call_llm(
+            prompt, return_usage=True, model=ANTHROPIC_SUMMARY_MODEL
+        )
         summary_content = {
             "short_summary": llm_result.get("short_summary", ""),
             "key_points": llm_result.get("key_points", []),
@@ -511,16 +512,16 @@ class IngestHandler:
     ) -> None:
         input_tokens = usage["input_tokens"]
         output_tokens = usage["output_tokens"]
+        model = usage["model"]
+        input_cost_rate, output_cost_rate = LLM_MODEL_COST_PER_MILLION_TOKENS[model]
         cost = Decimal(input_tokens) / Decimal(1_000_000) * Decimal(
-            str(LLM_INPUT_COST_PER_MILLION_TOKENS)
-        ) + Decimal(output_tokens) / Decimal(1_000_000) * Decimal(
-            str(LLM_OUTPUT_COST_PER_MILLION_TOKENS)
-        )
+            str(input_cost_rate)
+        ) + Decimal(output_tokens) / Decimal(1_000_000) * Decimal(str(output_cost_rate))
         self.llm_usage_service.create_llm_usage(
             blog_id=blog_id,
             call_type=call_type.value,
             provider="anthropic",
-            model=ANTHROPIC_MODEL,
+            model=model,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             total_tokens=input_tokens + output_tokens,
