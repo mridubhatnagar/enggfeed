@@ -143,13 +143,16 @@ class BlogDAO(IBlogDAO):
 
         if tag_ids:
             from sqlalchemy import select
+
             subquery = select(BlogTag.blog_id).where(BlogTag.tag_id.in_(tag_ids))
             query = query.filter(Blog.id.in_(subquery))
 
         if keyword is not None:
             # Keyword search uses PostgreSQL tsvector full-text search.
             # Excludes limited tier articles (word_count < CONTENT_TIER_LIMITED_MAX_WORDS).
-            query = query.filter(Blog.word_count >= CONTENT_TIER_LIMITED_MAX_WORDS).filter(
+            query = query.filter(
+                Blog.word_count >= CONTENT_TIER_LIMITED_MAX_WORDS
+            ).filter(
                 text(
                     "to_tsvector('english', coalesce(blog.title, '')) "
                     "@@ plainto_tsquery('english', :kw)"
@@ -175,9 +178,9 @@ class BlogDAO(IBlogDAO):
                     (Blog.word_count >= CONTENT_TIER_LIMITED_MAX_WORDS, 1),
                     else_=2,
                 )
-                query = query.order_by(tier_order, Blog.published_at.desc())
+                query = query.order_by(tier_order, Blog.created_at.desc())
             else:
-                query = query.order_by(Blog.published_at.desc())
+                query = query.order_by(Blog.created_at.desc())
             return query.offset(offset).limit(count).all()
         except Exception as exc:
             raise DatabaseError(f"Failed to list blogs: {exc}") from exc
