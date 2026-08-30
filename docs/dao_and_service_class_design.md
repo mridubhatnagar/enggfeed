@@ -290,6 +290,8 @@ class ILLMUsageDAO(ABC):
     def list_monthly_costs(self, since: datetime): ...
     @abstractmethod
     def get_total_costs(self): ...
+    @abstractmethod
+    def list_costs_by_call_type(self, since: datetime): ...
 
 
 class LLMUsageDAO(ILLMUsageDAO):
@@ -298,6 +300,7 @@ class LLMUsageDAO(ILLMUsageDAO):
     def list_daily_costs(self, since: datetime): ...  # GROUP BY date_trunc('day', created_at) — (day, calls, cost_usd) rows, ordered by day
     def list_monthly_costs(self, since: datetime): ...  # GROUP BY date_trunc('month', created_at) — (month, calls, cost_usd) rows, ordered by month
     def get_total_costs(self): ...  # no GROUP BY, no filter — single (calls, cost_usd) row across all of llm_usage
+    def list_costs_by_call_type(self, since: datetime): ...  # GROUP BY call_type, filtered by created_at >= since — (call_type, calls, cost_usd) rows, ordered by call_type
 ```
 
 ---
@@ -424,6 +427,7 @@ class LLMUsageService:
     def get_daily_costs(self, since: datetime): ...
     def get_monthly_costs(self, since: datetime): ...
     def get_total_costs(self): ...
+    def get_costs_by_call_type(self, since: datetime): ...
 ```
 
 ---
