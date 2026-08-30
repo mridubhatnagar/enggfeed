@@ -423,11 +423,18 @@ class FeedbackRequest(BaseModel):
     "total_cost_usd_monthly_window": "6.42662564",
     "monthly": [
       { "month": "2026-08", "calls": 1194, "cost_usd": "6.42662564" }
+    ],
+    "by_call_type_since": "2026-08-20",
+    "by_call_type": [
+      { "call_type": "summary", "calls": 40, "cost_usd": "0.11200000" },
+      { "call_type": "simplify", "calls": 35, "cost_usd": "0.52500000" },
+      { "call_type": "tag_prerequisite_extraction", "calls": 17, "cost_usd": "0.33734300" }
     ]
   },
   "error": null
 }
 ```
+- `by_call_type` uses the same `days`-based lookback window as the `daily` breakdown (i.e. `daily_since`) — not a separate query param.
 
 **Response (unauthorized):**
 ```json

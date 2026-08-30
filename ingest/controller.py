@@ -150,6 +150,16 @@ def get_cost(
             for row in monthly_rows
         ]
 
+        by_call_type_rows = service.get_costs_by_call_type(daily_since)
+        by_call_type = [
+            {
+                "call_type": row.call_type,
+                "calls": row.calls,
+                "cost_usd": str(row.cost_usd),
+            }
+            for row in by_call_type_rows
+        ]
+
         return APIResponse(
             success=True,
             data={
@@ -165,6 +175,8 @@ def get_cost(
                     sum((row.cost_usd for row in monthly_rows), Decimal("0"))
                 ),
                 "monthly": monthly,
+                "by_call_type_since": daily_since.date().isoformat(),
+                "by_call_type": by_call_type,
             },
             error=None,
         )

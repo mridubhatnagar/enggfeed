@@ -39,3 +39,6 @@ class LLMUsageService:
 
     def get_total_costs(self):
         return self.dao.get_total_costs()
+
+    def get_costs_by_call_type(self, since: datetime):
+        return self.dao.list_costs_by_call_type(since)
